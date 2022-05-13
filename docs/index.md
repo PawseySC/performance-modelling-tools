@@ -1,17 +1,11 @@
 # Performance Modeling Tools
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+This repository hosts configuration files and scripts to support performance modeling of research application on Pawsey Supercomputing Centre systems. 
 
-## Commands
+We provide examples of using the following profilers for hotspot, trace, and events profiling.
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+* rocprof (AMD GPUs)
+* nvprof (Nvidia GPUs)
+* HPC Toolkit (CPU, Nvidia GPUs, and AMD GPUs)
 
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+Further, Python scripts are provided for processing results to create figures or datasets that can be migrated to other platforms for visualization.

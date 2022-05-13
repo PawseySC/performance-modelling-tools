@@ -1,1 +1,25 @@
-site_name: My Docs
+site_name: Performance Modeling Tools
+site_description: Performance modeling with free or open-source tools
+site_author: Fluid Numerics
+site_dir: public
+site_url: ""
+repo_name: GitHub/PawseySC/performance-modelling-tools
+repo_url: https://github.com/PawseySC/performance-modelling-tools
+edit_uri: edit/main/docs/mkdocs
+
+# Directory where site content is located
+docs_dir: docs/
+
+# Site navigation 
+nav:
+  - Home: index.md
+  - Getting Started: 
+    - Getting Started: getting_started/index.md
+    - Installation: getting_started/install.md
+
+# Configuration
+strict: false
+
+markdown_extensions:
+  - admonition
+
