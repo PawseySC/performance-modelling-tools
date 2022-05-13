@@ -65,9 +65,28 @@ OMP_NUM_THREADS=1 srun --exact \
                        --ntasks-per-socket=2 \
                        --threads-per-core=1 \
                        rocprof --stats --sys-trace \
-                       ./exess $INPUT
+                       ./exess $INPUT >$odir/log.txt
 
 mv results.* $odir/
+
+# Create metadata file with information about this run
+cd $cwd
+cat <<EOT >> $odir/info.json
+{
+  "datetime":"$(date +"%Y/%m/%d %H:%M")",
+  "user": "$(whoami)",
+  "git branch": "$(cd $EXESS && git rev-parse --abbrev-ref HEAD),"
+  "git sha": "$(cd $EXESS && git rev-parse HEAD),"
+  "system": "$(hostname)",
+  "compiler": "",
+  "compiler flags": "",
+  "slurm allocation flags": "",
+  "launch command": "",
+  "gpu accelerated": "True",
+  "input_file":"$INPUT"
+}
+EOT
+#"input_file":{"name":"$INPUT","content":"$(tr -d '[:space:]' < $EXESS/$INPUT)"}
 
 # TO DO
 #python3 $PERFMODELING/models/hotspot/rocprof-hotspot.py --png --csv results.stats.csv
