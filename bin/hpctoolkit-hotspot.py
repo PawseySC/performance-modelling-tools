@@ -63,7 +63,7 @@ def main():
   # If the output directory does not end in "/"
   # append "/"
   odir = args.odir
-  if args.odir[-1] ~= "/":
+  if args.odir[-1] != "/":
     odir = args.odir+"/"
 
   # Read in HPCToolkit database.
@@ -81,6 +81,9 @@ def main():
                                 ascending=False)
 
   if args.csv :
-    sorted_df.to_csv(odir+dname)
+    sorted_df.to_csv(odir+dbname+'.csv')
 
   # TO DO : bar plot, then csv
+
+if __name__ == '__main__':
+  main()
