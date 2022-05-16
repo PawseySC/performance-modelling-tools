@@ -13,3 +13,5 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
                        libjpeg-dev \
                        libpng-dev && \
     pip3 install -r /tmp/requirements.txt
+
+COPY bin/ /opt/pmt/bin
