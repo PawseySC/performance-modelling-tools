@@ -28,7 +28,7 @@
 #   This script is meant to be run on a compute node on Mulan
 #   First, obtain an allocation
 #
-#    salloc -n1 -c 32 --threads-per-core=1 --partition=workq --project=$PAWSEY_PROJECT
+#    salloc -n1 -c 32 --threads-per-core=1 --partition=workq --project=$PAWSEY_PROJECT --mem=240G
 #
 #   Build EXESS-dev using the `install.sh` script in this directory
 #

@@ -16,7 +16,7 @@ For GPU profiling, we recommend using `rocprof`
 
 1. Start a compute allocation on mulan
 ```
-salloc -n1 -c32 --threads-per-core=1 --partition=workq --project=$PAWSEY_PROJECT
+salloc -n1 -c32 --threads-per-core=1 --partition=workq --project=$PAWSEY_PROJECT --mem=240G
 ```
 
 2. Clone this repository to your group directory, if you have not done so already.
