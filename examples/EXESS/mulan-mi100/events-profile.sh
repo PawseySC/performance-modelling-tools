@@ -28,7 +28,7 @@
 #   This script is meant to be run on a compute node on Mulan
 #   First, obtain an allocation
 #
-#    salloc -n1 -c 64 --partition=workq --project=$PAWSEY_PROJECT
+#    salloc -n1 -c 32 --threads-per-core=1 --partition=workq --project=$PAWSEY_PROJECT
 #
 #   Build EXESS-dev using the `install.sh` script in this directory
 #
@@ -67,7 +67,7 @@ cat rocprof-input.txt
 # Launch the application with
 OMP_NUM_THREADS=1 srun --exact \
                        --ntasks=1 \
-                       --cpus-per-task=64 \
+                       --cpus-per-task=32 \
                        --threads-per-core=1 \
                        --cpu-bind=socket \
                        rocprof -i rocprof-input.txt \
