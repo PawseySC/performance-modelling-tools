@@ -63,6 +63,7 @@ source $SPACK/share/spack/setup-env.sh
 spack env activate -d $PERFMODELING/spack/mulan
 
 # Enable singularity
+. /pawsey/mulan/bin/init-singularity-3.7.4.sh
 
 cwd=$(pwd)
 hpcdb="hpctoolkit_$(date +"%Y-%m-%d-%H-%M")"
@@ -77,7 +78,7 @@ OMP_NUM_THREADS=$NTHREADS srun --exact \
                        --threads-per-core=1 \
                        --cpu-bind=socket \
 		       hpcrun -o $odir/db \
-                       ./exess $INPUT
+                       ./exess $INPUT > $odir/log.txt
 
 # Recover the program structure
 hpcstruct -o $odir/exess.struct ./exess
@@ -93,6 +94,24 @@ hpcstruct -o $odir/exess.struct ./exess
 srun -n1 hpcprof-mpi --metric-db=yes -I ./src/+ $odir/db
 mv hpctoolkit-database $odir/
 
+
+# Create metadata file with information about this run
+cd $cwd
+cat <<EOT >> $odir/info.json
+{
+  "datetime":"$(date +"%Y/%m/%d %H:%M")",
+  "user": "$(whoami)",
+  "git branch": "$(cd $EXESS && git rev-parse --abbrev-ref HEAD),"
+  "git sha": "$(cd $EXESS && git rev-parse HEAD),"
+  "system": "$(hostname)",
+  "compiler": "",
+  "compiler flags": "",
+  "slurm allocation flags": "",
+  "launch command": "",
+  "gpu accelerated": "True",
+  "input_file":"$INPUT"
+}
+EOT
 
 # Process database to hotspot profile
 cd $cwd
