@@ -22,7 +22,7 @@
 #   This script is meant to be run on a compute node on Mulan with 1 MI100 GPU
 #   First, obtain an allocation
 #
-#    salloc -n1 -c 64 --gres=gpu:1 --partition=workq --project=$PAWSEY_PROJECT
+#    salloc -n1 -c 32 --threads-per-core=1 --gres=gpu:1 --partition=workq --project=$PAWSEY_PROJECT --mem=240G
 #
 #   Build EXESS-dev using the `install.sh` script in this directory
 #
