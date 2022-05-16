@@ -42,7 +42,7 @@
 
 EXESS="${EXESS_ROOT:-EXESS-dev_hip_dev}"
 PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modelling-tools}"
-INPUT="${INPUT_DECK:-inputs/json_inputs/scf/w1.json}"
+INPUT="${INPUT_DECK:-inputs/json_inputs_sprint/w1.json}"
 
 
 module unload gcc/9.3.0

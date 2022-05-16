@@ -53,7 +53,8 @@
 EXESS="${EXESS_ROOT:-EXESS-dev_cpu_port}"
 SPACK="${SPACK_ROOT:-$MYGROUP/spack}"
 PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modeling-tools}"
-INPUT="${INPUT_DECK:-inputs/json_inputs/scf/w1.json}"
+INPUT="${INPUT_DECK:-inputs/json_inputs_sprint/w1.json}"
+
 
 if [ -z "$KERNEL" ];
   echo "You need to set KERNEL variable to run events profiling"
