@@ -43,37 +43,61 @@
 #     PERF_ROOT
 #
 #     INPUT
+#
+#     EXESS_NTHREADS
 # 
 # ///////////////////////////////////////////////////////////////////////// #
 
 
 EXESS="${EXESS_ROOT:-EXESS-dev_cpu_port}"
 SPACK="${SPACK_ROOT:-$MYGROUP/spack}"
-PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modeling-tools}"
-INPUT="${INPUT_DECK:-inputs/json_inputs/scf/w1.json}"
-
+PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modelling-tools}"
+INPUT="${INPUT_DECK:-inputs/json_inputs_sprint/w15.json}"
+NTHREADS="${EXESS_NTHREADS:-1}"
+PMT_SIMG="${PMT_SIF:-/group/pawsey0007/jschoonover/containers/pmt_latest.sif}"
 
 # Enable spack
-source $SPACK_ROOT/share/spack/setup-env.sh
+source $SPACK/share/spack/setup-env.sh
 
 # Activate spack environment
 spack env activate -d $PERFMODELING/spack/mulan
 
+# Enable singularity
+
+cwd=$(pwd)
+hpcdb="hpctoolkit_$(date +"%Y-%m-%d-%H-%M")"
+odir="$cwd/$hpcdb"
+mkdir $odir
+cd $EXESS
 
 # Launch the application with hpcrun
-OMP_NUM_THREADS=1 srun --exact \
+OMP_NUM_THREADS=$NTHREADS srun --exact \
                        --ntasks=1 \
-                       --cpus-per-task=32 \
+                       --cpus-per-task=$NTHREADS \
                        --threads-per-core=1 \
                        --cpu-bind=socket \
-                       hpcrun -o ./hpctoolkit-db \
-                       $EXESS/exess $EXESS/$INPUT
+		       hpcrun -o $odir/db \
+                       ./exess $INPUT
 
 # Recover the program structure
-hpcstruct $EXESS/exess
+hpcstruct -o $odir/exess.struct ./exess
+#
+## Analyze measurements and attribute to source code
+## The "/+" syntax for the included source directory
+## Indicates that hpcprof should recursively search
+## the source code directory.
+#
+# Additional flags provided according to
+# https://hatchet.readthedocs.io/en/latest/data_generation.html#hpctoolkit
 
-# Analyze measurements and attribute to source code
-# The "/+" syntax for the included source directory
-# Indicates that hpcprof should recursively search
-# the source code directory.
-hpcprof -I $EXESS/src/+ ./hpctoolkit-db
+srun -n1 hpcprof-mpi --metric-db=yes -I ./src/+ $odir/db
+mv hpctoolkit-database $odir/
+
+
+# Process database to hotspot profile
+cd $cwd
+singularity exec --bind $(pwd):/workspace $PMT_SIMG \
+  python3 /opt/pmt/bin/hpctoolkit-hotspot.py --csv --odir /workspace /workspace/$hpcdb/hpctoolkit-database/
+
+
+
