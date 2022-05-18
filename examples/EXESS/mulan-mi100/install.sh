@@ -90,6 +90,7 @@ git checkout $git_branch
 git checkout $git_checkout
 
 mkdir -p build && cd build
+rm -rf ./*
 
 CXX=hipcc cmake .. \
   -DMPI_ROOT=$MPI_ROOT \
