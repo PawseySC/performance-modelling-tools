@@ -61,7 +61,16 @@ module load cray-hdf5/1.12.0.6
 
 export MPI_ROOT="$MPICH_DIR"
 export HDF5_ROOT="$HDF5_DIR"
-export MATHLIB_ROOT="$ROCM_PATH"
+if [ $USE_MAGMA == "True" ] ; then
+  export MAGMA_ROOT="$MAGMA_HOME"
+  CMAKE_LINALG_DEFINE="-DMAGMA_ROOT=$MAGMA_ROOT"
+elif [ $USE_MAGMA == "False" ] ; then
+  export MATHLIB_ROOT="$ROCM_PATH"
+  CMAKE_LINALG_DEFINE="-DMATHLIB_ROOT=$MATHLIB_ROOT"
+else
+  echo "Variable USE_MAGMA must be set to either True or False. Exiting."
+  exit 1
+fi
 export HIP_PATH="$ROCM_PATH/hip"
 export JSON_ROOT="$JSON"
 
@@ -86,7 +95,7 @@ CXX=hipcc cmake .. \
   -DMPI_ROOT=$MPI_ROOT \
   -DHDF5_ROOT=$HDF5_ROOT \
   -DJSON_ROOT=$JSON_ROOT \
-  -DMATHLIB_ROOT=$MATHLIB_ROOT \
+  $CMAKE_LINALG_DEFINE \
   -DHIP=$USE_HIP \
   -DBUILD_RIMP2=0 \
   -DMAGMA=$USE_MAGMA \
