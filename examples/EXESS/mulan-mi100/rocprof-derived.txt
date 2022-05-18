@@ -1,0 +1,9 @@
+# Perf counters group 1
+pmc : VALUUtilization VALUBusy SALUBusy
+kernel: void stedc_kernel<double, double, double*>(int, double*, long, double*, long, double*, int, int, long, int*, double*, double, double, double)
+
+pmc : ALUStalledByLDS LDSBankConflict
+kernel: void stedc_kernel<double, double, double*>(int, double*, long, double*, long, double*, int, int, long, int*, double*, double, double, double)
+
+pmc : MemUnitBusy MemUnitStalled WriteUnitStalled
+kernel: void stedc_kernel<double, double, double*>(int, double*, long, double*, long, double*, int, int, long, int*, double*, double, double, double)

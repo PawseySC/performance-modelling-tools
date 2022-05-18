@@ -50,26 +50,54 @@
 # ///////////////////////////////////////////////////////////////////////// #
 
 
-EXESS="${EXESS_ROOT:-EXESS-dev_cpu_port}"
+EXESS="${EXESS_ROOT:-EXESS-dev_hip_dev}"
 SPACK="${SPACK_ROOT:-$MYGROUP/spack}"
 PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modeling-tools}"
 INPUT="${INPUT_DECK:-inputs/json_inputs_sprint/w1.json}"
 
+module unload gcc/9.3.0
+module load craype-accel-amd-gfx908
+module load rocm/4.5.0
+module load cray-hdf5/1.12.0.6
+. /pawsey/mulan/bin/init-mi100-hipsolver-4.5.0.sh
+. /pawsey/mulan/bin/init-mi100-magma-2.6.2.sh
+. /pawsey/mulan/bin/init-cmake-3.21.4.sh
 
-if [ -z "$KERNEL" ];
+if [ -z "$KERNEL" ]; then
   echo "You need to set KERNEL variable to run events profiling"
   exit 1
 fi
 
 cp rocprof-input.tmpl rocprof-input.txt
-sed -i "s/@KERNEL@/$KERNEL/g" rocprof-input.txt
-cat rocprof-input.txt
+sed -i "s/@KERNEL@/$KERNEL/g" rocprof-derived.txt
+cat rocprof-derived.txt
+
+cwd=$(pwd)
+odir="$cwd/rocprof_$(date +"%Y-%m-%d-%H-%M")"
+mkdir -p $odir
+cd $EXESS
 
 # Launch the application with
 OMP_NUM_THREADS=1 srun --exact \
-                       --ntasks=1 \
-                       --cpus-per-task=32 \
+                       --ntasks=2 \
+		       --cpus-per-task=1 \
+                       --ntasks-per-socket=2 \
                        --threads-per-core=1 \
-                       --cpu-bind=socket \
-                       rocprof -i rocprof-input.txt \
-                       $EXESS/exess $EXESS/$INPUT
+		       ../rocprof-wrapper.sh $INPUT $odir ../rocprof-derived.txt
+
+cd $cwd
+cat <<EOT >> $odir/info.json
+{
+  "datetime":"$(date +"%Y/%m/%d %H:%M")",
+  "user": "$(whoami)",
+  "git branch": "$(cd $EXESS && git rev-parse --abbrev-ref HEAD),"
+  "git sha": "$(cd $EXESS && git rev-parse HEAD),"
+  "system": "$(hostname)",
+  "compiler": "",
+  "compiler flags": "",
+  "slurm allocation flags": "",
+  "launch command": "",
+  "gpu accelerated": "True",
+  "input_file":"$INPUT"
+}
+EOT

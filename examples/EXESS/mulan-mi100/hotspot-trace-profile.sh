@@ -50,7 +50,7 @@ module load craype-accel-amd-gfx908
 module load rocm/4.5.0
 module load cray-hdf5/1.12.0.6
 . /pawsey/mulan/bin/init-mi100-hipsolver-4.5.0.sh
-#. /pawsey/mulan/bin/init-mi100-magma-2.6.2.sh
+. /pawsey/mulan/bin/init-mi100-magma-2.6.2.sh
 . /pawsey/mulan/bin/init-cmake-3.21.4.sh
 
 cwd=$(pwd)
@@ -64,7 +64,7 @@ OMP_NUM_THREADS=1 srun --exact \
 		       --cpus-per-task=1 \
                        --ntasks-per-socket=2 \
                        --threads-per-core=1 \
-		       ../rocprof-wrapper.sh $INPUT $odir
+		       ../rocprof-wrapper.sh $INPUT $odir ../rocprof-input.txt
 
 #
 ## Create metadata file with information about this run
