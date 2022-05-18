@@ -1,0 +1,2 @@
+# Perf counters group 1
+pmc : GPUBusy

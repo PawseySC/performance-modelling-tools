@@ -55,7 +55,7 @@ module load cray-hdf5/1.12.0.6
 
 cwd=$(pwd)
 odir="$cwd/rocprof_$(date +"%Y-%m-%d-%H-%M")"
-mkdir $odir
+mkdir -p $odir
 cd $EXESS
 
 # Launch the application with rocprof
@@ -64,12 +64,10 @@ OMP_NUM_THREADS=1 srun --exact \
 		       --cpus-per-task=1 \
                        --ntasks-per-socket=2 \
                        --threads-per-core=1 \
-                       rocprof --stats --sys-trace \
-                       ./exess $INPUT >$odir/log.txt
+		       ../rocprof-wrapper.sh $INPUT $odir
 
-mv results.* $odir/
-
-# Create metadata file with information about this run
+#
+## Create metadata file with information about this run
 cd $cwd
 cat <<EOT >> $odir/info.json
 {
