@@ -41,8 +41,8 @@
 # ///////////////////////////////////////////////////////////////////////// #
 
 
-EXESS_GIT_BRANCH="${EXESS_ROOT:-hip_dev}"
-PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modeling-tools}"
+EXESS_GIT_BRANCH="${EXESS_GIT_BRANCH:-hip_dev}"
+PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modelling-tools}"
 JSON="${JSON:-$MYGROUP/mulan/json}"
 USE_MAGMA="${EXESS_USE_MAGMA:-False}"
 GPU_BOARD="${EXESS_GPU_BOARD:-MI100}"
