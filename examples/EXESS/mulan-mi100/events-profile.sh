@@ -69,7 +69,7 @@ OMP_NUM_THREADS=1 srun --exact \
 		       --cpus-per-task=1 \
                        --ntasks-per-socket=2 \
                        --threads-per-core=1 \
-		       ../rocprof-wrapper.sh $INPUT $odir ../rocprof-derived.txt
+		       ../rocprof-wrapper.sh $INPUT $odir ../rocprof-derived.txt ""
 
 cd $cwd
 cat <<EOT >> $odir/info.json

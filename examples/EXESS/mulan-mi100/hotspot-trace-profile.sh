@@ -64,8 +64,7 @@ OMP_NUM_THREADS=1 srun --exact \
 		       --cpus-per-task=1 \
                        --ntasks-per-socket=2 \
                        --threads-per-core=1 \
-		       ../rocprof-wrapper.sh $INPUT $odir ../rocprof-input.txt
-
+		       ../rocprof-wrapper.sh $INPUT $odir ../rocprof-input.txt "--stats --sys-trace" 
 #
 ## Create metadata file with information about this run
 cd $cwd
