@@ -12,17 +12,6 @@
 # 
 # Prerequisites :
 #
-#   If you have access to Joe Schoonover's spack installation,
-#
-#   export SPACK_ROOT=/group/pawsey0007/jschoonover/spack
-#   export PERF_ROOT=/group/pawsey0007/jschoonover/performance-modeling-tools
-#
-#   If you do not have access to Joe Schoonover's spack installation
-#   on Pawsey systems, you can install spack and the Mulan spack
-#   environment for performance-modelling-tools.
-#
-#   Step by step walkthrough can be found at [TO DO]
-#
 # Usage :
 #
 #   This script is meant to be run on a compute node on Mulan
@@ -39,8 +28,6 @@
 #
 #     EXESS_ROOT
 #
-#     SPACK_ROOT
-#
 #     PERF_ROOT
 #
 #     INPUT
@@ -51,7 +38,6 @@
 
 
 EXESS="${EXESS_ROOT:-EXESS-dev_hip_dev}"
-SPACK="${SPACK_ROOT:-$MYGROUP/spack}"
 PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modeling-tools}"
 INPUT="${INPUT_DECK:-inputs/json_inputs_sprint/w1.json}"
 
@@ -68,7 +54,7 @@ if [ -z "$KERNEL" ]; then
   exit 1
 fi
 
-cp rocprof-input.tmpl rocprof-input.txt
+cp rocprof-derived.tmpl rocprof-derived.txt
 sed -i "s/@KERNEL@/$KERNEL/g" rocprof-derived.txt
 cat rocprof-derived.txt
 

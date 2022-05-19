@@ -1,0 +1,9 @@
+# Perf counters group 1
+pmc : VALUUtilization VALUBusy SALUBusy
+kernel: @KERNEL@
+
+pmc : ALUStalledByLDS LDSBankConflict
+kernel: @KERNEL@
+
+pmc : MemUnitBusy MemUnitStalled WriteUnitStalled
+kernel: @KERNEL@
