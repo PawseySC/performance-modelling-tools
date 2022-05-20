@@ -1,9 +1,10 @@
 # Perf counters group 1
-pmc : VALUUtilization VALUBusy SALUBusy
+pmc : VALUUtilization VALUBusy SALUBusy ALUStalledByLDS LDSBankConflict
 kernel: @KERNEL@
 
-pmc : ALUStalledByLDS LDSBankConflict
+
+pmc : TCC_HIT_sum TCC_MISS_sum L2CacheHit MemUnitBusy MemUnitStalled WriteUnitStalled
 kernel: @KERNEL@
 
-pmc : MemUnitBusy MemUnitStalled WriteUnitStalled
+pmc : GDSInsts LDSInsts SALUInsts VALUInsts GPUBusy
 kernel: @KERNEL@
