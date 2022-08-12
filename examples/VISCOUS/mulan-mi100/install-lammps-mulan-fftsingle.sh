@@ -61,6 +61,7 @@ make yes-KSPACE
 make yes-MOLECULE
 make yes-RIGID
 make yes-MOLFILE
+make yes-UEF
 make yes-KOKKOS
 
 sg $group -c 'make -j 8 mulan_mi100'
