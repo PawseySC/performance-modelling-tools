@@ -55,6 +55,7 @@ sed -i '/KOKKOS_LIBS *+= *-latomic/ s/^/#/g' ../lib/kokkos/Makefile.kokkos
 make yes-CLASS2
 make yes-MANYBODY
 make yes-MISC
+make yes-EXTRA-COMPUTE
 make yes-EXTRA-DUMP
 make yes-EXTRA-FIX
 make yes-KSPACE
