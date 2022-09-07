@@ -1,0 +1,43 @@
+# ERT configuration for Mulan GPU cluster
+# AMD MI100 GPU
+
+ERT_RESULTS Results.Mulan-MI100
+
+ERT_DRIVER  driver1
+ERT_KERNEL  kernel1
+
+ERT_HIP		True
+ERT_GPU         True
+ERT_GPU_CFLAGS  -x c++ -x hip -O3 -D__HIP_PLATFORM_HCC__ -D__HIP_PLATFORM_AMD__ -I/opt/rocm/4.5.0/hip/include -I/opt/rocm/4.5.0/llvm/bin/../lib/clang/13.0.0 -I/opt/rocm/4.5.0/hsa/include
+ERT_GPU_LDFLAGS 
+
+ERT_FLOPS   1,2,64,512,1024
+ERT_ALIGN   32
+
+ERT_CC      hipcc
+ERT_CFLAGS  -O3
+
+ERT_LD      hipcc
+ERT_LDFLAGS 
+ERT_LDLIBS  
+
+ERT_RUN  ./ERT_CODE
+
+ERT_PRECISION FP32,FP64
+
+ERT_BLOCKS_THREADS 262144
+ERT_GPU_BLOCKS     8192,4096,2048,1024
+ERT_GPU_THREADS    32,64,128,256
+
+ERT_NUM_EXPERIMENTS 3
+
+ERT_WSS_MULT 1.3
+
+ERT_MEMORY_MAX 1073741824
+
+ERT_WORKING_SET_MIN 1024
+
+ERT_TRIALS_MIN 32
+
+ERT_GNUPLOT gnuplot
+
