@@ -27,13 +27,16 @@
 #   the behavior of this script
 #
 #    PERF_ROOT
+#
+#    PERF_ODIR
 # 
 # ///////////////////////////////////////////////////////////////////////// #
 
 
+cwd=$(pwd)
 
 PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modelling-tools}"
-
+ODIR="${PERF_ODIR:-$cwd/${HOSTNAME}/$(date +"%Y-%m-%d-%H-%M")}"
 
 case "$HOSTNAME" in
 
@@ -48,18 +51,15 @@ case "$HOSTNAME" in
 esac 
 
 
-echo $HOSTNAME
-cwd=$(pwd)
-odir="$cwd/${HOSTNAME}/$(date +"%Y-%m-%d-%H-%M")"
-echo "Saving results to : $odir"
-mkdir -p $odir
+echo "Saving results to : $ODIR"
+mkdir -p $ODIR
 
 
-cd $odir
+cd $ODIR
 git clone https://github.com/ekondis/mixbench.git
 mkdir build
 cd build
-cmake $odir/mixbench/$mixbench
+cmake $ODIR/mixbench/$mixbench
 make
 
 
@@ -69,12 +69,11 @@ srun --exact \
      --cpus-per-task=1 \
      --ntasks-per-socket=1 \
      --threads-per-core=1 \
-     ./mixbench-hip > $odir/mixbench-log.txt
+     ./mixbench-hip > $ODIR/mixbench-log.txt
 
 # Clean up source code
-rm -rf $odir/mixbench $odir/build
+rm -rf $ODIR/mixbench $ODIR/build
 
 # Process output
-python3 $PERFMODELING/bin/mixbench-report.py --csv --json $odir/mixbench-log.txt
+python3 $PERFMODELING/bin/mixbench-report.py --csv --json $ODIR/mixbench-log.txt
 
-export PERFMODELING_ODIR=$odir
