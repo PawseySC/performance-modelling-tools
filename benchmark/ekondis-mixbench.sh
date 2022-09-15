@@ -32,7 +32,7 @@
 
 
 
-PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modeling-tools}"
+PERFMODELING="${PERF_ROOT:-$MYGROUP/performance-modelling-tools}"
 
 
 case "$HOSTNAME" in
@@ -69,10 +69,12 @@ srun --exact \
      --cpus-per-task=1 \
      --ntasks-per-socket=1 \
      --threads-per-core=1 \
-     ./mixbench-hip-ro > $odir/mixbench-log.txt
+     ./mixbench-hip > $odir/mixbench-log.txt
 
 # Clean up source code
 rm -rf $odir/mixbench $odir/build
 
 # Process output
-##python3 $PERFMODELING/bin/mixbench-report.py --png --csv --json $odir/mixbench-log.txt
+python3 $PERFMODELING/bin/mixbench-report.py --csv --json $odir/mixbench-log.txt
+
+export PERFMODELING_ODIR=$odir

@@ -102,6 +102,10 @@ def parseCSVData(csvLines):
         data['integer']['GIOPS'].append(float(sline[11]))
         data['integer']['bandwidth'].append(float(sline[12]))
 
+  data['singlePrecision']['maxBandwidth']=max(data['singlePrecision']['bandwidth'])
+  data['doublePrecision']['maxBandwidth']=max(data['doublePrecision']['bandwidth'])
+  data['integer']['maxBandwidth']=max(data['integer']['bandwidth'])
+
   return data
 
 
