@@ -1,0 +1,21 @@
+/*! \file logger.h
+ *  \brief report some info 
+ */
+
+#ifndef LOGGER_H
+#define LOGGER_H
+
+#include <string>
+#include <iostream> 
+#include <vector>
+#include <algorithm>
+#include <numeric>
+
+
+class Logger
+{
+    public:
+    void ReportTimes(std::string , std::vector<double> &);
+};
+
+#endif

@@ -1,3 +1,7 @@
 .spack-env
 spack.lock
 .vscode
+*.o
+*.so
+*.exe
+
