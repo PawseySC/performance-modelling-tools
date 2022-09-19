@@ -36,17 +36,29 @@ if (itype == GPU_ONLY_KERNEL_LAUNCH)
 
 #elif defined(USEOPENACC)
 #else 
+    gpuEvent_t start, stop;
+    float t1;
+    gpuEventCreate(&start);
+    gpuEventCreate(&stop);
     if (itype == GPU_ONLY_KERNEL_LAUNCH) 
     {
+        gpuGetTime(start);
         float *a;
         silly_kernel<<<1,1>>>(a);
+        gpuGetTime(stop);
+        gpuEventElapsedTime(&t1,start,stop);
+        LogGPUElapsedTime("KernelLaunchOnly", t1);
     }
     if (itype == GPU_ONLY_MEM_ALLOCATE) 
     {
+        gpuGetTime(start);
         float *a;
         auto N = 1024;
         gpuMalloc(&a, N*sizeof(float)); 
         gpuFree(a);
+        gpuGetTime(stop);
+        gpuEventElapsedTime(&t1,start,stop);
+        LogGPUElapsedTime("MemAllocOnly", t1);
     }
 #endif
 
