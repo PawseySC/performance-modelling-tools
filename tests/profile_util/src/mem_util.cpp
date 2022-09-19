@@ -2,8 +2,11 @@
  *  \brief Get memory 
  */
 
+#ifdef _MPI
 #include <unordered_set>
 #include <map>
+#include <array>
+#endif
 
 #include "profile_util.h"
 

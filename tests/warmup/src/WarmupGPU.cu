@@ -28,6 +28,12 @@ void silly_kernel(float *a)
 void warmup_kernel(int itype)
 {
 #ifdef _OPENMP 
+if (itype == GPU_ONLY_KERNEL_LAUNCH) 
+    {
+        float *a;
+        
+    }
+
 #elif defined(USEOPENACC)
 #else 
     if (itype == GPU_ONLY_KERNEL_LAUNCH) 

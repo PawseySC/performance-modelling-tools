@@ -22,11 +22,11 @@
 #include <device_launch_parameters.h>
 
 
-#define gpuMalloc cuMalloc
-#define gpuFree cuFree
-#define gpuMemcpy cuMemcpy
-#define gpuMemcpyHostToDevice cuMemcpyHostToDevice
-#define gpuMemcpyDeviceToHost cuMemcpyDeviceToHost
+#define gpuMalloc cudaMalloc
+#define gpuFree cudaFree
+#define gpuMemcpy cudaMemcpy
+#define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
+#define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
 
 #endif
 

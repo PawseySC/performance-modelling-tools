@@ -136,8 +136,9 @@ namespace profiling_util {
         s += "Running with CUDA and found " + std::to_string(nDevices) + "\n";
         for (auto i=0;i<nDevices;i++)
         {
+            cudaDeviceProp prop;
             cudaGetDeviceProperties(&prop, i);
-            s += "Device" + string(prop.name);
+            s += "Device" + std::string(prop.name);
             s += " Compute Units " + std::to_string(prop.multiProcessorCount);
             s += " Max Work Group Size " + std::to_string(prop.warpSize);
             s += " Local Mem Size " + std::to_string(prop.sharedMemPerBlock);

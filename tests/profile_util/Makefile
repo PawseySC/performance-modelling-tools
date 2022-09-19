@@ -2,9 +2,16 @@
 
 OUTPUTFILEBASE=libprofile_util
 CXXFLAGS = -fPIC -std=c++17 -O2
-OMPFLAGS ?= -fopenmp
-EXTRAFLAGS ?= 
+
 COMPILER ?=$(CXX)
+ifeq ($(COMPILER), nvcc)
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 -O2
+endif
+ifeq ($(COMPILER), hipcc)
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 -O2
+endif
+
+EXTRAFLAGS ?= 
 COMPILERFLAGS = $(CXXFLAGS) $(EXTRAFLAGS)
 
 BUILDTYPE ?= serial
@@ -25,4 +32,4 @@ obj/%.o: src/%.cpp include/profile_util.h
 	$(COMPILER) $(COMPILERFLAGS) -Iinclude/ -c $< -o $@
 
 clean:
-	rm -f $(LIB).so
+	rm -f $(LIB).so $(OBJS)

@@ -7,7 +7,7 @@ void Logger::ReportTimes(std::string name, std::vector<double> &times)
     double ave = 0, stddev = 0, n = static_cast<double>(times.size());
     for (auto &x:times) { ave += x; stddev += x*x;}
     ave /= n;
-    stddev = std::sqrt((stddev - n*ave*ave)/(n-1));
+    stddev = sqrt((stddev - n*ave*ave)/(n-1));
     // sort times and keep track of order
     std::vector<size_t> idx(times.size());
     std::iota(idx.begin(), idx.end(), 0);

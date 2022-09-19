@@ -1,18 +1,31 @@
 
+buildtype = omp
+DEFS = -DUSEOPENMP
+CXXFLAGS = -std=c++17 -O2 -fopenmp 
+
 CXX = hipcc
+ifeq ($(CXX), nvcc)
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 -O2
+buildtype = cuda
+DEFS = -DUSECUDA
+endif
+ifeq ($(CXX), hipcc)
 buildtype = hip
 DEFS = -DUSEHIP 
-CXXFLAGS = -std=c++17 -Xcompiler -O2 \
--I$(shell pwd)/../profile_util/include/ -Iinclude/ \
-$(DEFS)
-LDFLAGS = -L$(shell pwd)/../profile_util/lib/ -lprofile_util_$(buildtype) -Wl,-rpath=$(shell pwd)/../profile_util/lib/
+CXXFLAGS = -std=c++17 -O2
+endif
+
+CXXFLAGS += -I$(shell pwd)/../profile_util/include/ -Iinclude/ 
+CXXFLAGS += $(DEFS) 
+LDFLAGS = -L$(shell pwd)/../profile_util/lib/ -Wl,-rpath=$(shell pwd)/../profile_util/lib/
+LIBS = -lprofile_util_$(buildtype)
 
 # Target executable name:
 EXE = bin/warm_up_test.$(buildtype).exe
 
 OBJS = obj/main.o \
+obj/logger.o \
 obj/WarmupGPU.o \
-obj/logger.o
 
 .PHONY: libprofile_util $(EXE)
 
@@ -28,15 +41,18 @@ libprofile_util:
 
 $(EXE) : $(OBJS)
 	@echo "Making $(EXE) " ;
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -v $(OBJS) -o $@ -Iinclude
+	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) -o $@ $(LIBS)
 
 obj/%.o: src/%.cpp include/*.h 
 	$(CXX) $(CXXFLAGS) -Iinclude/ -c $< -o $@
 
+ifeq ($(buildtype), omp)
+else 
 obj/%.o: src/%.cu include/*.h 
 	$(CXX) $(CXXFLAGS) -Iinclude/ -c $< -o $@
+endif
 
 clean:
-	rm $(OBJS) $(EXE)
-	$(MAKE) -C profile_util/ clean  
+	rm -f $(OBJS) $(EXE)
+	$(MAKE) -C ../profile_util/ clean  
 	
