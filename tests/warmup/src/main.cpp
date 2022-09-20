@@ -12,6 +12,7 @@
 #include <iostream>
 #include <complex>
 #include <vector>
+#include <map>
 #include <algorithm>
 #include <string>
 #include <chrono>
@@ -42,12 +43,27 @@ int main()
     // now check the kernel launches
     //std::vector<profiling_util::Timer> timers;
     std::vector<double> times;
+    std::map<std::string, std::vector<double>> device_times;
+    std::vector<double> x;
+    device_times.insert({"allocation",x});
+    device_times.insert({"tH2D",x});
+    device_times.insert({"tD2H",x});
+    device_times.insert({"free",x});
+    device_times.insert({"kernel",x});
     for (auto i=0;i<Niter;i++) 
     {
         auto t = NewTimer();
-        run_kernel();
+        auto timings = run_kernel();
         times.push_back(t.get());
+        for (auto &t:timings) 
+        {
+            device_times[t.first].push_back(t.second);
+        }
     }
     Logger logger;
-    logger.ReportTimes("Run_kernel", times);
+    logger.ReportTimes("run_kernel", times);
+    std::cout<<"---------------------------------"<<std::endl;
+    std::cout<<"On Device times within run_kernel"<<std::endl;
+    for (auto &t:device_times) logger.ReportTimes(t.first,t.second);
+    std::cout<<"---------------------------------"<<std::endl;
 }

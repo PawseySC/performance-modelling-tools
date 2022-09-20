@@ -5,10 +5,10 @@ CXXFLAGS = -fPIC -std=c++17 -O2
 
 COMPILER ?=$(CXX)
 ifeq ($(COMPILER), nvcc)
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 -O2
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 -O2
 endif
 ifeq ($(COMPILER), hipcc)
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 -O2
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 -O2
 endif
 
 EXTRAFLAGS ?= 

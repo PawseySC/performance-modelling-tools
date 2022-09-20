@@ -12,15 +12,15 @@ endif
 ifeq ($(CXX), hipcc)
 buildtype = hip
 DEFS = -DUSEHIP 
-CXXFLAGS = -std=c++17 -O2
+CXXFLAGS = -Xcompiler -std=c++14 -O2
 endif
 
 CXXFLAGS += -I$(shell pwd)/../profile_util/include/ -Iinclude/ 
 CXXFLAGS += $(DEFS) 
 LDFLAGS = -L$(shell pwd)/../profile_util/lib/
-ifeq ($(buildtype), hip)
-LDFLAGS += -Wl,-rpath=$(shell pwd)/../profile_util/lib/
-endif
+#ifeq ($(buildtype), hip)
+#LDFLAGS += -Wl,-rpath=$(shell pwd)/../profile_util/lib/
+#endif
 ifeq ($(buildtype), omp)
 LDFLAGS += -Wl,-rpath=$(shell pwd)/../profile_util/lib/
 endif
