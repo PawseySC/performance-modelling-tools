@@ -27,7 +27,7 @@ int main()
     int warm_up_type = GPU_ONLY_KERNEL_LAUNCH;
     int Niter = 100;
 
-    // look at warm-up kernel    
+    // look at warm-up kernel
     auto timeWarmup = NewTimer();
     // may want to add explicit tracing
     std::cout<<"Warming up "<<std::endl; 
@@ -35,9 +35,9 @@ int main()
     LogTimeTaken(timeWarmup);
     // second round     
     std::cout<<"second round "<<std::endl; 
-    timeWarmup = NewTimer();
+    auto timesecondround = NewTimer();
     warmup_kernel(warm_up_type);
-    LogTimeTaken(timeWarmup);
+    LogTimeTaken(timesecondround);
 
 
     // now check the kernel launches
