@@ -1,1 +1,0 @@
-WarmupGPU.cu

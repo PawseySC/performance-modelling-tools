@@ -3,9 +3,9 @@ buildtype = omp
 DEFS = -DUSEOPENMP
 CXXFLAGS = -std=c++17 -O2 -fopenmp 
 
-CXX = hipcc
+CXX = gcc
 ifeq ($(CXX), nvcc)
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 -O2
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 -O2
 buildtype = cuda
 DEFS = -DUSECUDA
 endif
@@ -17,7 +17,13 @@ endif
 
 CXXFLAGS += -I$(shell pwd)/../profile_util/include/ -Iinclude/ 
 CXXFLAGS += $(DEFS) 
-LDFLAGS = -L$(shell pwd)/../profile_util/lib/ -Wl,-rpath=$(shell pwd)/../profile_util/lib/
+LDFLAGS = -L$(shell pwd)/../profile_util/lib/
+ifeq ($(buildtype), hip)
+LDFLAGS += -Wl,-rpath=$(shell pwd)/../profile_util/lib/
+endif
+ifeq ($(buildtype), omp)
+LDFLAGS += -Wl,-rpath=$(shell pwd)/../profile_util/lib/
+endif
 LIBS = -lprofile_util_$(buildtype)
 
 # Target executable name:
@@ -43,14 +49,21 @@ $(EXE) : $(OBJS)
 	@echo "Making $(EXE) " ;
 	$(CXX) $(CXXFLAGS) $(OBJS) $(LDFLAGS) -o $@ $(LIBS)
 
+ifeq ($(buildtype), omp)
+obj/WarmupGPU.o: src/WarmupGPU.cu include/*.h 
+	cp src/WarmupGPU.cu src/WarmupGPU.cpp ;
+	$(CXX) $(CXXFLAGS) -Iinclude/ -c src/WarmupGPU.cpp -o obj/WarmupGPU.o ;
+	rm src/WarmupGPU.cpp ;
 obj/%.o: src/%.cpp include/*.h 
 	$(CXX) $(CXXFLAGS) -Iinclude/ -c $< -o $@
-
-ifeq ($(buildtype), omp)
 else 
+obj/%.o: src/%.cpp include/*.h 
+	$(CXX) $(CXXFLAGS) -Iinclude/ -c $< -o $@
 obj/%.o: src/%.cu include/*.h 
 	$(CXX) $(CXXFLAGS) -Iinclude/ -c $< -o $@
 endif
+
+
 
 clean:
 	rm -f $(OBJS) $(EXE)

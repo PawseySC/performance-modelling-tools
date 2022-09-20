@@ -392,10 +392,12 @@ namespace profiling_util {
             pu_gpuEventSynchronize(t0_event);
 #endif
         }
+#if defined(USEHIP) || defined(USECUDA)
         ~Timer()
         {
             pu_gpuEventDestroy(t0_event);
         }
+#endif
 
     private:
         clock::time_point t0;
