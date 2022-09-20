@@ -38,6 +38,37 @@
 #ifdef _OPENMP 
 #include <omp.h>
 #endif
+/// \defgroup GPU related define statements 
+//@{
+#ifdef USEHIP
+#define pu_gpuMalloc hipMalloc
+#define pu_gpuFree hipFree
+#define pu_gpuMemcpy hipMemcpy
+#define pu_gpuMemcpyHostToDevice hipMemcpyHostToDevice
+#define pu_gpuMemcpyDeviceToHost hipMemcpyDeviceToHost
+#define pu_gpuEvent_t hipEvent_t
+#define pu_gpuEventCreate hipEventCreate
+#define pu_gpuEventDestroy hipEventDestroy
+#define pu_gpuEventRecord hipEventRecord
+#define pu_gpuEventSynchronize  hipEventSynchronize
+#define pu_gpuEventElapsedTime hipEventElapsedTime
+
+#else 
+
+#define pu_gpuMalloc cudaMalloc
+#define pu_gpuFree cudaFree
+#define pu_gpuMemcpy cudaMemcpy
+#define pu_gpuMemcpyHostToDevice cudaMemcpyHostToDevice
+#define pu_gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
+#define pu_gpuEvent_t cudaEvent_t
+#define pu_gpuEventCreate cudaEventCreate
+#define pu_gpuEventDestroy cudaEventDestroy
+#define pu_gpuEventRecord cudaEventRecord
+#define pu_gpuEventSynchronize  cudaEventSynchronize
+#define pu_gpuEventElapsedTime cudaEventElapsedTime
+
+#endif
+//@}
 
 namespace profiling_util {
 
@@ -312,10 +343,39 @@ namespace profiling_util {
             return std::chrono::duration_cast<std::chrono::microseconds>(clock::now() - t0).count();
         }
 
+        /*!
+         * Returns the elapsed time on device since the reference time
+         * of the device event
+         *
+         * @return The time elapsed since the creation of the timer, in [us]
+         */
+#if defined(USEHIP) || defined(USECUDA)
+        inline
+        float get_on_device() const 
+        {
+            pu_gpuEvent_t t1_event;
+            pu_gpuEventCreate(&t1_event);
+            pu_gpuEventRecord(t1_event); 
+            pu_gpuEventSynchronize(t1_event);
+            float telapsed;
+            pu_gpuEventElapsedTime(&telapsed,t0_event,t1_event);
+#ifdef USEHIP
+            telapsed *= 1000; // to convert to milliseconds 
+#else
+#endif
+            pu_gpuEventDestroy(t1_event);
+            return telapsed;
+        }
+#endif
+
         void set_ref(const std::string &new_ref)
         {
             ref = new_ref;
             t0 = clock::now();
+#if defined(USEHIP) || defined(USECUDA)
+            pu_gpuEventRecord(t0_event); 
+            pu_gpuEventSynchronize(t0_event);
+#endif
         };
         std::string get_ref() const 
         {
@@ -326,12 +386,24 @@ namespace profiling_util {
             ref="@"+f+" L"+l;
             t0 = clock::now();
             tref = t0;
+#if defined(USEHIP) || defined(USECUDA)
+            pu_gpuEventCreate(&t0_event);
+            pu_gpuEventRecord(t0_event); 
+            pu_gpuEventSynchronize(t0_event);
+#endif
+        }
+        ~Timer()
+        {
+            pu_gpuEventDestroy(t0_event);
         }
 
     private:
         clock::time_point t0;
         clock::time_point tref;
         std::string ref;
+#if defined(USEHIP) || defined(USECUDA)
+        pu_gpuEvent_t t0_event;
+#endif
     };
 
     /// get the time taken between some reference time (which defaults to creation of timer )
@@ -339,6 +411,10 @@ namespace profiling_util {
     std::string ReportTimeTaken(const Timer &t, const std::string &f, const std::string &l);
     float GetTimeTaken(const Timer &t, const std::string &f, const std::string &l);
 
+#if defined(USEHIP) || defined(USECUDA)
+    std::string ReportTimeTakenOnDevice(const Timer &t, const std::string &f, const std::string &l);
+    float GetTimeTakenOnDevice(const Timer &t, const std::string &f, const std::string &l);
+#endif
 }
 
 /// \def utility definitions 
@@ -400,6 +476,8 @@ namespace profiling_util {
 //@{
 #define LogTimeTaken(timer) std::cout<<profiling_util::ReportTimeTaken(timer, __func__, std::to_string(__LINE__))<<std::endl;
 #define LoggerTimeTaken(logger,timer) logger<<profiling_util::ReportTimeTaken(timer,__func__, std::to_string(__LINE__))<<std::endl;
+#define LogTimeTakenOnDevice(timer) std::cout<<profiling_util::ReportTimeTakenOnDevice(timer, __func__, std::to_string(__LINE__))<<std::endl;
+#define LoggerTimeTakenOnDevice(logger,timer) logger<<profiling_util::ReportTimeTakenOnDevice(timer,__func__, std::to_string(__LINE__))<<std::endl;
 #ifdef _MPI
 #define MPILogTimeTaken(timer) std::cout<<_MPI_calling_rank(ThisTask)<<profiling_util::ReportTimeTaken(timer, __func__, std::to_string(__LINE__))<<std::endl;
 #define MPILoggerTimeTaken(logger,timer) logger<<_MPI_calling_rank(ThisTask)<<profiling_util::ReportTimeTaken(timer,__func__, std::to_string(__LINE__))<<std::endl;

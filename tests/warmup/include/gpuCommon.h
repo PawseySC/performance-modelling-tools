@@ -18,6 +18,7 @@
 #define gpuMemcpyDeviceToHost hipMemcpyDeviceToHost
 #define gpuEvent_t hipEvent_t
 #define gpuEventCreate hipEventCreate
+#define gpuEventDestroy hipEventDestroy
 #define gpuEventRecord hipEventRecord
 #define gpuEventSynchronize  hipEventSynchronize
 #define gpuEventElapsedTime hipEventElapsedTime
@@ -34,13 +35,13 @@
 #define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
 #define gpuEvent_t cudaEvent_t
 #define gpuEventCreate cudaEventCreate
+#define gpuEventDestroy cudaEventDestroy
 #define gpuEventRecord cudaEventRecord
-#define gpuEventSynchronize  cudaEventSynchronize
+#define gpuEventSynchronize cudaEventSynchronize
 #define gpuEventElapsedTime cudaEventElapsedTime
 
 #endif
 
-#define gpuGetTime(t1) {gpuEventRecord(t1); gpuEventSynchronize(t1);}
-#define LogGPUElapsedTime(descrip, t1) std::cout<<"@"<<__func__<<" L"<<__LINE__<<": "<<descrip<<" :: elapsed time "<<t1<<std::endl; 
+#define LogGPUElapsedTime(descrip,t1) {std::cout<<descrip<<" ::";LogTimeTakenOnDevice(t1);}
 
 #endif

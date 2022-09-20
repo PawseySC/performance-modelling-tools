@@ -6,6 +6,7 @@
 #define WARMUPGPU_H
 
 #include <gpuCommon.h>
+#include <profile_util.h>
 
 /// GPU launch types
 //@{

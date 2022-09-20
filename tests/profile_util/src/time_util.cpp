@@ -33,5 +33,26 @@ namespace profiling_util {
         return static_cast<float>((t.get()));
     }
 
+#if defined(USEHIP) || defined(USECUDA)
+    std::string ReportTimeTakenOnDevice(
+        const Timer &t, 
+        const std::string &function, 
+        const std::string &line_num)
+    {
+        std::string new_ref = "@"+function+" L"+line_num;
+        std::ostringstream report;
+        report <<"Time taken on device between : " << new_ref << " - " << t.get_ref() << " : " << us_time(t.get_on_device());
+        return report.str();
+    }
+
+    float GetTimeTakenOnDevice(
+        const Timer &t, 
+        const std::string &function, 
+        const std::string &line_num)
+    {
+        return t.get_on_device();
+    }
+#endif
+
 } 
 
