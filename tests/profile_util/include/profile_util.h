@@ -362,6 +362,7 @@ namespace profiling_util {
 #ifdef USEHIP
             telapsed *= 1000; // to convert to milliseconds 
 #else
+            telapsed *= 1000; // to convert to milliseconds 
 #endif
             pu_gpuEventDestroy(t1_event);
             return telapsed;
