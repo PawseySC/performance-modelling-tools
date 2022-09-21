@@ -28,31 +28,66 @@ void silly_kernel(float *a)
 
 void warmup_kernel(int itype)
 {
+    int deviceCount = 0;
+    gpuGetDeviceCount(&deviceCount);
 #ifdef _OPENMP 
 if (itype == GPU_ONLY_KERNEL_LAUNCH) 
     {
         float *a;
         
     }
-
 #elif defined(USEOPENACC)
 #else 
     float t1;
-    if (itype == GPU_ONLY_KERNEL_LAUNCH) 
     {
-        float *a;
-        auto mytimer = NewTimer();
-        silly_kernel<<<1,1>>>(a);
-        LogGPUElapsedTime("KernelLaunchOnly", mytimer);
-    }
-    if (itype == GPU_ONLY_MEM_ALLOCATE) 
-    {
-        float *a;
+        float *a, *b;
         auto N = 1024;
-        auto mytimer = NewTimer();
-        gpuMalloc(&a, N*sizeof(float)); 
-        gpuFree(a);
-        LogGPUElapsedTime("MemAllocOnly", mytimer);
+        std::string kernel_type;
+        // for (auto i=0;i<deviceCount;i++) 
+        for (auto i=deviceCount-1;i>=0;i--) 
+        {
+            gpuSetDevice(i);
+            for (auto j=0;j<2;j++) 
+            {
+                if (itype == GPU_ONLY_KERNEL_LAUNCH) 
+                {
+                    kernel_type = "KernelLaunchOnly";
+                    auto mytimer = NewTimer();
+                    silly_kernel<<<1,1>>>(a);
+                    LogGPUElapsedTime(kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j), mytimer);
+                }
+                else if (itype == GPU_ONLY_MEM_ALLOCATE) 
+                {
+                    kernel_type = "MemAllocOnly";
+                    auto mytimer = NewTimer();
+                    gpuMalloc(&a, N*sizeof(float)); 
+                    gpuFree(a);
+                    LogGPUElapsedTime(kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j), mytimer);
+                }
+                else if (itype == GPU_ONLY_MEM_TH2D) 
+                {
+                    kernel_type = "tH2D";
+                    a = new float[N];
+                    gpuMalloc(&b, N*sizeof(float)); 
+                    auto mytimer = NewTimer();
+                    gpuMemcpy(b, a, N*sizeof(float), gpuMemcpyHostToDevice);
+                    LogGPUElapsedTime(kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j), mytimer);
+                    gpuFree(b);
+                    delete[] a;
+                }
+                else if (itype == GPU_ONLY_MEM_TD2H) 
+                {
+                    kernel_type = "tD2H";
+                    a = new float[N];
+                    gpuMalloc(&b, N*sizeof(float)); 
+                    auto mytimer = NewTimer();
+                    gpuMemcpy(a, b, N*sizeof(float), gpuMemcpyDeviceToHost);
+                    LogGPUElapsedTime(kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j), mytimer);
+                    gpuFree(b);
+                    delete[] a;
+                }
+            }
+        }
     }
 #endif
 

@@ -20,24 +20,23 @@
 #include <omp.h>
 #endif
 
-int main()
+int main(int argc, char** argv)
 {
     LogParallelAPI();
 
     int warm_up_type = GPU_ONLY_KERNEL_LAUNCH;
     int Niter = 100;
+    if (argc >= 2) warm_up_type = atoi(argv[1]);
+    if (argc >= 3) Niter = atoi(argv[2]);
 
     // look at warm-up kernel
     auto timeWarmup = NewTimer();
-    // may want to add explicit tracing
     std::cout<<"Warming up "<<std::endl; 
-    warmup_kernel(warm_up_type);
+    warmup_kernel(GPU_ONLY_KERNEL_LAUNCH);
+    warmup_kernel(GPU_ONLY_MEM_ALLOCATE);
+    warmup_kernel(GPU_ONLY_MEM_TH2D);
+    warmup_kernel(GPU_ONLY_MEM_TD2H);
     LogTimeTaken(timeWarmup);
-    // second round     
-    std::cout<<"second round "<<std::endl; 
-    auto timesecondround = NewTimer();
-    warmup_kernel(warm_up_type);
-    LogTimeTaken(timesecondround);
 
 
     // now check the kernel launches

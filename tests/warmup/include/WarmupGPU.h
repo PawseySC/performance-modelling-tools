@@ -14,6 +14,8 @@
 //@{
 #define GPU_ONLY_KERNEL_LAUNCH 0 
 #define GPU_ONLY_MEM_ALLOCATE 1
+#define GPU_ONLY_MEM_TH2D 2
+#define GPU_ONLY_MEM_TD2H 3
 //@}
 
 /// \defgroup kernels

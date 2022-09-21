@@ -11,6 +11,9 @@
 
 #include <hip/hip_runtime.h>
 
+#define gpuGetDeviceCount hipGetDeviceCount
+#define gpuSetDevice hipSetDevice
+#define gpuMemGetInfo hipMemGetInfo
 #define gpuMalloc hipMalloc
 #define gpuFree hipFree
 #define gpuMemcpy hipMemcpy
@@ -27,7 +30,9 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
-
+#define gpuGetDeviceCount cudaGetDeviceCount
+#define gpuSetDevice cudaSetDevice
+#define gpuMemGetInfo cudaMemGetInfo
 #define gpuMalloc cudaMalloc
 #define gpuFree cudaFree
 #define gpuMemcpy cudaMemcpy
