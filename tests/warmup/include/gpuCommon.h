@@ -6,6 +6,9 @@
 #define GPUCOMMON_H
 
 #include <iostream>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #ifdef USEHIP
 
@@ -25,7 +28,7 @@
 #define gpuEventRecord hipEventRecord
 #define gpuEventSynchronize  hipEventSynchronize
 #define gpuEventElapsedTime hipEventElapsedTime
-#else 
+#elif defined(USECUDA)
 
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>

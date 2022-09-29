@@ -22,7 +22,9 @@
 
 int main(int argc, char** argv)
 {
+    Logger logger;
     LogParallelAPI();
+    logger.ReportGPUSetup();
 
     int warm_up_type = GPU_ONLY_KERNEL_LAUNCH;
     int Niter = 100;
@@ -59,7 +61,6 @@ int main(int argc, char** argv)
             device_times[t.first].push_back(t.second);
         }
     }
-    Logger logger;
     logger.ReportTimes("run_kernel", times);
     std::cout<<"---------------------------------"<<std::endl;
     std::cout<<"On Device times within run_kernel"<<std::endl;

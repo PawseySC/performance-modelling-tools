@@ -17,6 +17,7 @@ class Logger
 {
     public:
     void ReportTimes(std::string , std::vector<double> &);
+    void ReportGPUSetup();
 };
 
 #endif

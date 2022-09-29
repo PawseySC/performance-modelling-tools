@@ -10,6 +10,7 @@
 #include <string>
 #include <map>
 
+
 /// GPU launch types
 //@{
 #define GPU_ONLY_KERNEL_LAUNCH 0 

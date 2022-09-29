@@ -32,3 +32,17 @@ void Logger::ReportTimes(std::string name, std::vector<double> &times)
     std::cout<<"Times (ave,stddev) = ";
     std::cout<<"("<<ave<<", "<<stddev<<")"<<std::endl;
 }
+
+void Logger::ReportGPUSetup(){
+    std::string s;
+#ifdef _OPENMP 
+    s = "OpenMP Target Offloading";
+#elif defined(USEHIP)
+    s = "HIP";
+#elif defined(USECUDA)
+    s = "CUDA";
+#else 
+    s = "Unknown";
+#endif
+    std::cout<<"Code using: "<<s<<std::endl; 
+} 
