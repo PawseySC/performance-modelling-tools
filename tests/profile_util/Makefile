@@ -2,14 +2,7 @@
 
 OUTPUTFILEBASE=libprofile_util
 CXXFLAGS = -fPIC -std=c++17 -O2
-
 COMPILER ?=$(CXX)
-ifeq ($(COMPILER), nvcc)
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 -O2
-endif
-ifeq ($(COMPILER), hipcc)
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 -O2
-endif
 
 EXTRAFLAGS ?= 
 COMPILERFLAGS = $(CXXFLAGS) $(EXTRAFLAGS)
@@ -23,7 +16,7 @@ LIB = lib/$(OUTPUTFILEBASE)$(BUILDNAME)
 
 $(LIB).so: $(OBJS)
 	@echo "Making $(BUILDTYPE) for $(DEVICETYPE) library"
-	$(CXX) -shared $(OBJS) -o $(LIB).so
+	$(COMPILER) -shared $(OBJS) -o $(LIB).so
 	rm $(OBJS)
 
 $(OBJS): obj/%.o : src/%.cpp include/profile_util.h
