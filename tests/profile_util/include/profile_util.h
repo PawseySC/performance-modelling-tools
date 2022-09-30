@@ -183,16 +183,16 @@ namespace profiling_util {
         std::basic_ostream<T> &operator<<(std::basic_ostream<T> &os, const detail::_microseconds_amount &t)
         {
             auto time = t._val;
-            if (time < 1000) {
+            if (time < 1000000.0) {
                 os << time << " [us]";
                 return os;
             }
 
-            time /= 1000;
-            if (time < 1000) {
-                os << time << " [ms]";
-                return os;
-            }
+            // time /= 100000.0;
+            // if (time < 100000.0) {
+            //     os << time << " [ms]";
+            //     return os;
+            // }
 
             float ftime = time / 1000.f;
             const char *prefix = " [s]";
