@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 {
     Logger logger;
     LogParallelAPI();
-    logger.ReportGPUSetup();
+    auto runtype = logger.ReportGPUSetup();
 
     int warm_up_type = GPU_ONLY_KERNEL_LAUNCH;
     int Niter = 100;
@@ -40,30 +40,6 @@ int main(int argc, char** argv)
     warmup_kernel(GPU_ONLY_MEM_TD2H);
     LogTimeTaken(timeWarmup);
 
-
-    // now check the kernel launches
-    //std::vector<profiling_util::Timer> timers;
-    std::vector<double> times;
-    std::map<std::string, std::vector<double>> device_times;
-    std::vector<double> x;
-    device_times.insert({"allocation",x});
-    device_times.insert({"tH2D",x});
-    device_times.insert({"tD2H",x});
-    device_times.insert({"free",x});
-    device_times.insert({"kernel",x});
-    for (auto i=0;i<Niter;i++) 
-    {
-        auto t = NewTimer();
-        auto timings = run_kernel();
-        times.push_back(t.get());
-        for (auto &t:timings) 
-        {
-            device_times[t.first].push_back(t.second);
-        }
-    }
-    logger.ReportTimes("run_kernel", times);
-    std::cout<<"---------------------------------"<<std::endl;
-    std::cout<<"On Device times within run_kernel"<<std::endl;
-    for (auto &t:device_times) logger.ReportTimes(t.first,t.second);
-    std::cout<<"---------------------------------"<<std::endl;
+    // run a kernel on all possible devices, report timings
+    run_on_devices(logger, Niter);
 }

@@ -9,6 +9,7 @@
 #include <profile_util.h>
 #include <string>
 #include <map>
+#include <logger.h>
 
 
 /// GPU launch types
@@ -23,7 +24,8 @@
 /// GPU kernels 
 //@{
 void warmup_kernel(int kernel_type);
-std::map<std::string, double> run_kernel();
+void run_on_devices(Logger &, int);
+std::map<std::string, double> run_kernel(int);
 void run_memcopy();
 //@}
 

@@ -29,9 +29,9 @@ DEFS = -DUSEHIP
 endif
 
 ifeq ($(buildtype), hipomp)
-CXX = hipcc
-CXXFLAGS = -Xcompiler -std=c++14 -Xcompiler -fPIC $(OPTFLAGS) -fopenmp
-DEFS = -D_OPENMP -DUSEHIP
+CXX = amdclang++
+CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenmp --offload-arch=gfx908 -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
+#DEFS =
 endif
 
 CXXFLAGS += $(DEFS) 
