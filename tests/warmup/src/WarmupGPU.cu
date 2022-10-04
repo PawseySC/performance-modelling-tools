@@ -28,13 +28,114 @@ void silly_kernel(float *a)
 }
 #endif
 
-void warmup_kernel(int itype)
+void launch_warmup_kernel(int itype, int i, int j, unsigned long long N) 
 {
-    int deviceCount = 0;
+    std::string kernel_type, s;
     float t1;
     float *a, *b;
+    if (itype == GPU_ONLY_KERNEL_LAUNCH)
+    {
+        kernel_type = "KernelLaunchOnly";
+        s = kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j); 
+        auto mytimer = NewTimer();
+#ifdef _OPENMP 
+        #pragma omp target
+        {
+            #pragma omp parallel for
+            for (int i = 0; i < 2; i++) {a[i] + 2*a[i];}
+        }
+        
+        // N = 200000000;
+        // std::cout<<"memory "<<N*sizeof(float)/1024./1024./1024.<<std::endl;
+        // a = new float[N];
+        // // #pragma omp target map(tofrom:a[:N])
+        // #pragma omp target map(alloc:a[:N])
+        // {
+        //     #pragma omp parallel for
+        //     for (int i = 0; i < N; i++) {
+        //         a[i] = 1.0;
+        //         a[i] = a[i] + 2*a[i];
+        //         a[i] = exp(-sqrt(a[i]));
+        //     }
+        // }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
+#elif defined(USEHIP) || defined(USECUDA)
+        silly_kernel<<<1,1>>>(a);
+        LogGPUElapsedTime(s, mytimer);
+#endif
+    }
+    if (itype == GPU_ONLY_MEM_ALLOCATE) 
+    {
+        kernel_type = "MemAllocOnly";
+        s = kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j); 
+        auto mytimer = NewTimer();
+#ifdef _OPENMP
+        // auto a_d = omp_target_alloc(N*sizeof(float), i);
+        // omp_target_free(a_d, i);
+        #pragma omp target data map(alloc:a[:N])
+        {
+        }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
+#elif defined(USEHIP) || defined(USECUDA)
+        gpuMalloc(&a, N*sizeof(float)); 
+        gpuFree(a);
+        LogGPUElapsedTime(s, mytimer);
+#endif
+    }
+    else if (itype == GPU_ONLY_MEM_TH2D) 
+    {
+        kernel_type = "tH2D";
+        s = kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j); 
+        a = new float[N];
+#ifdef _OPENMP
+        auto mytimer = NewTimer();
+        #pragma omp target data map(to:a[:N])
+        {
+            
+        }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
+#elif defined(USEHIP) || defined(USECUDA)
+        gpuMalloc(&b, N*sizeof(float)); 
+        auto mytimer = NewTimer();
+        gpuMemcpy(b, a, N*sizeof(float), gpuMemcpyHostToDevice);
+        LogGPUElapsedTime(s, mytimer);
+        gpuFree(b);
+#endif
+        delete[] a;
+    }
+    // transfer from device to host
+    else if (itype == GPU_ONLY_MEM_TD2H) 
+    {
+        kernel_type = "tD2H";
+        s = kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j); 
+        a = new float[N];
+#ifdef _OPENMP
+        auto mytimer = NewTimer();
+        #pragma omp target data map(from:a[:N])
+        {
+
+        }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
+#elif defined(USEHIP) || defined(USECUDA)
+        gpuMalloc(&b, N*sizeof(float)); 
+        auto mytimer = NewTimer();
+        gpuMemcpy(a, b, N*sizeof(float), gpuMemcpyDeviceToHost);
+        LogGPUElapsedTime(s, mytimer);
+        gpuFree(b);
+#endif
+        delete[] a;
+    }
+}
+
+
+void warmup_kernel_over_kernels(int rounds)
+{
+    int deviceCount = 0;
     unsigned long long N = 1024*1024;
-    std::string kernel_type;
 
 #ifdef _OPENMP 
     deviceCount = omp_get_num_devices();
@@ -50,117 +151,42 @@ void warmup_kernel(int itype)
 #elif defined(USEHIP) || defined(USECUDA)
         gpuSetDevice(i);
 #endif
-        for (auto j=0;j<2;j++) 
+        for (auto j=0;j<rounds;j++) 
         {
-#ifdef _OPENMP 
-            if (itype == GPU_ONLY_KERNEL_LAUNCH)
+            for (auto itype=0;itype<GPU_ONLY_NUM_LAUNCH_TYPES;itype++) 
             {
-                kernel_type = "KernelLaunchOnly";
-                auto mytimer = NewTimer();
-                #pragma omp target
-                {
-                    for (int i = 0; i < 2; i++) {a[i] + 2*a[i];}
-                }
-                // N = 2000000000;
-                // std::cout<<"memory "<<N*sizeof(float)/1024./1024./1024.<<std::endl;
-                // a = new float[N];
-                // #pragma omp target map(tofrom:a[:N])
-                // {
-                //     for (int i = 0; i < N; i++) {
-                //         a[i] = 1.0;
-                //         a[i] = a[i] + 2*a[i];
-                //         a[i] = exp(-sqrt(a[i]));
-                //     }
-                // }
-                std::cout<<kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j);
-                LogTimeTaken(mytimer);
+                launch_warmup_kernel(itype, i, j, N);
             }
-            if (itype == GPU_ONLY_MEM_ALLOCATE) 
-            {
-                kernel_type = "MemAllocOnly";
-                auto mytimer = NewTimer();
-                // auto a_d = omp_target_alloc(N*sizeof(float), i);
-                // omp_target_free(a_d, i);
-                #pragma omp target data map(alloc:a[:N])
-                {
-                }
-                std::cout<<kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j);
-                LogTimeTaken(mytimer);
-            }
-            else if (itype == GPU_ONLY_MEM_TH2D) 
-            {
-                kernel_type = "tH2D";
-                a = new float[N];
-                // LogMemUsage();
-                auto mytimer = NewTimer();
-                #pragma omp target data map(to:a[:N])
-                {
-                    
-                }
-                std::cout<<kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j);
-                LogTimeTaken(mytimer);
-                delete[] a;
-                // LogMemUsage();
-            }
-            // transfer from device to host
-            else if (itype == GPU_ONLY_MEM_TD2H) 
-            {
-                kernel_type = "tD2H";
-                a = new float[N];
-                // LogMemUsage();
-                auto mytimer = NewTimer();
-                #pragma omp target data map(from:a[:N])
-                {
+        }
+    }
+}
 
-                }
-                std::cout<<kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j);
-                LogTimeTaken(mytimer);
-                delete[] a;
-                // LogMemUsage();
-            }
+void warmup_kernel_over_rounds(int rounds, int sleeptime)
+{
+    int deviceCount = 0;
+    unsigned long long N = 1024*1024;
+
+#ifdef _OPENMP 
+    deviceCount = omp_get_num_devices();
 #elif defined(USEHIP) || defined(USECUDA)
-            // here to a minimal kernel launch
-            if (itype == GPU_ONLY_KERNEL_LAUNCH) 
+    gpuGetDeviceCount(&deviceCount);
+#endif
+
+    for (auto itype=0;itype<GPU_ONLY_NUM_LAUNCH_TYPES;itype++) 
+    {
+        for (auto i=0;i<deviceCount;i++) 
+        {
+        // set the device 
+#ifdef _OPENMP 
+            omp_set_default_device(i);
+#elif defined(USEHIP) || defined(USECUDA)
+            gpuSetDevice(i);
+#endif
+            for (auto j=0;j<rounds;j++) 
             {
-                kernel_type = "KernelLaunchOnly";
-                auto mytimer = NewTimer();
-                silly_kernel<<<1,1>>>(a);
-                LogGPUElapsedTime(kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j), mytimer);
+                launch_warmup_kernel(itype, i, j, N);
+                if (sleeptime > 0) sleep(sleeptime);
             }
-            // allocate a free 
-            else if (itype == GPU_ONLY_MEM_ALLOCATE) 
-            {
-                kernel_type = "MemAllocOnly";
-                auto mytimer = NewTimer();
-                gpuMalloc(&a, N*sizeof(float)); 
-                gpuFree(a);
-                LogGPUElapsedTime(kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j), mytimer);
-            }
-            // transfer from host to device
-            else if (itype == GPU_ONLY_MEM_TH2D) 
-            {
-                kernel_type = "tH2D";
-                a = new float[N];
-                gpuMalloc(&b, N*sizeof(float)); 
-                auto mytimer = NewTimer();
-                gpuMemcpy(b, a, N*sizeof(float), gpuMemcpyHostToDevice);
-                LogGPUElapsedTime(kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j), mytimer);
-                gpuFree(b);
-                delete[] a;
-            }
-            // transfer from device to host
-            else if (itype == GPU_ONLY_MEM_TD2H) 
-            {
-                kernel_type = "tD2H";
-                a = new float[N];
-                gpuMalloc(&b, N*sizeof(float)); 
-                auto mytimer = NewTimer();
-                gpuMemcpy(a, b, N*sizeof(float), gpuMemcpyDeviceToHost);
-                LogGPUElapsedTime(kernel_type + " on device " + std::to_string(i) + " round " + std::to_string(j), mytimer);
-                gpuFree(b);
-                delete[] a;
-            }
-            #endif
         }
     }
 }
@@ -240,7 +266,7 @@ std::map<std::string, double> run_kernel(int offset)
     #pragma omp target data map(to:x[:N],y[:N]) map(from:out[:N]) 
     {
         #pragma omp target
-        #pragma omp for
+        #pragma omp parallel for
         for (int i=0;i<N;i++) out[i] = x[i] + y[i];
     }
     // timings.insert({std::string("allocation"), telapsed});
