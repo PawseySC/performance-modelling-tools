@@ -26,18 +26,18 @@ int main(int argc, char** argv)
     LogParallelAPI();
     auto runtype = logger.ReportGPUSetup();
 
-    int warm_up_type = GPU_ONLY_KERNEL_LAUNCH;
     int Niter = 100;
-    if (argc >= 2) warm_up_type = atoi(argv[1]);
-    if (argc >= 3) Niter = atoi(argv[2]);
+    int rounds = 2;
+    int warm_up_type = 0;
+    if (argc >= 2) rounds = atoi(argv[1]);
+    if (argc >= 3) warm_up_type = atoi(argv[2]);
+    if (argc >= 4) Niter = atoi(argv[3]);
 
     // look at warm-up kernel
     auto timeWarmup = NewTimer();
     std::cout<<"Warming up "<<std::endl; 
-    warmup_kernel(GPU_ONLY_KERNEL_LAUNCH);
-    warmup_kernel(GPU_ONLY_MEM_ALLOCATE);
-    warmup_kernel(GPU_ONLY_MEM_TH2D);
-    warmup_kernel(GPU_ONLY_MEM_TD2H);
+    if (warm_up_type == 0) warmup_kernel_over_rounds(rounds);
+    else warmup_kernel_over_kernels(rounds);
     LogTimeTaken(timeWarmup);
 
     // run a kernel on all possible devices, report timings

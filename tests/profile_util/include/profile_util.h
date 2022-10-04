@@ -188,13 +188,7 @@ namespace profiling_util {
                 return os;
             }
 
-            // time /= 100000.0;
-            // if (time < 100000.0) {
-            //     os << time << " [ms]";
-            //     return os;
-            // }
-
-            float ftime = time / 1000.f;
+            float ftime = time / 1000000.f;
             const char *prefix = " [s]";
             if (ftime > 60) {
                 ftime /= 60;

@@ -18,14 +18,18 @@
 #define GPU_ONLY_MEM_ALLOCATE 1
 #define GPU_ONLY_MEM_TH2D 2
 #define GPU_ONLY_MEM_TD2H 3
+#define GPU_ONLY_NUM_LAUNCH_TYPES 4
 //@}
 
 /// \defgroup kernels
 /// GPU kernels 
 //@{
-void warmup_kernel(int kernel_type);
+void launch_warmup_kernel(int itype, int i, int j, unsigned long long N);
+void warmup_kernel_over_kernels(int rounds = 2);
+void warmup_kernel_over_rounds(int rounds = 2, int sleeptime = 0);
 void run_on_devices(Logger &, int);
 std::map<std::string, double> run_kernel(int);
+
 void run_memcopy();
 //@}
 
