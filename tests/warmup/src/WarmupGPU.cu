@@ -2,7 +2,8 @@
 #include <iostream>
 #include <cmath>
 
-#ifndef _OPENMP 
+#ifndef _OPENMP
+/// standard scalar a * vector x plus vector y 
 __global__
 void saxpy(int n, float a, float *x, float *y)
 {
@@ -10,6 +11,8 @@ void saxpy(int n, float a, float *x, float *y)
   if (i < n) y[i] = a*x[i] + y[i];
 }
 
+
+/// just a vector add to new vector
 __global__
 void vector_add(float *out, float *a, float *b, int n)
 {
@@ -19,6 +22,8 @@ void vector_add(float *out, float *a, float *b, int n)
     if (id < n) out[id] = a[id] + b[id];
 }
 
+
+/// silly kernel that should be very quick
 __global__
 void silly_kernel(float *a)
 {
@@ -131,11 +136,11 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
     }
 }
 
-
-void warmup_kernel_over_kernels(int rounds)
+void warmup_kernel_over_kernels(int rounds, unsigned long long N)
 {
     int deviceCount = 0;
-    unsigned long long N = 1024*1024;
+    std::cout<<__func__<<" running "<<std::endl;
+    auto timeWarmup = NewTimer();
 
 #ifdef _OPENMP 
     deviceCount = omp_get_num_devices();
@@ -159,12 +164,14 @@ void warmup_kernel_over_kernels(int rounds)
             }
         }
     }
+    LogTimeTaken(timeWarmup);
 }
 
-void warmup_kernel_over_rounds(int rounds, int sleeptime)
+void warmup_kernel_over_rounds(int rounds, int sleeptime, unsigned long long N)
 {
     int deviceCount = 0;
-    unsigned long long N = 1024*1024;
+    std::cout<<__func__<<" running "<<std::endl;
+    auto timeWarmup = NewTimer();
 
 #ifdef _OPENMP 
     deviceCount = omp_get_num_devices();
@@ -189,6 +196,7 @@ void warmup_kernel_over_rounds(int rounds, int sleeptime)
             }
         }
     }
+    LogTimeTaken(timeWarmup);
 }
 
 void run_on_devices(Logger &logger, int Niter)
