@@ -16,6 +16,7 @@ This repository is organized with the following top-level directories
 * `docs/` : Contains mkdocs documentation
 * `examples/` : Contains example configurations for creating profile data and processing output with the tools in this repository.
 * `spack/` : Contains spack environments for various Pawsey systems that provide hpc-toolkit and other useful tools.
+* `tests/`: Contains some simple tests for exploring device offloading with HIP, CUDA, OpenMP. Currently has a single test, `warmup/`
 
 
 ## Getting Help
