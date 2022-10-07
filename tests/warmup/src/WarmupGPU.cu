@@ -65,6 +65,11 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
         // }
         std::cout<<s<<" ";
         LogTimeTaken(mytimer);
+#elif defined(_OPENACC)
+        #pragma acc parallel loop
+            for (int i = 0; i < 2; i++) {a[i] + 2*a[i];}
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
 #elif defined(USEHIP) || defined(USECUDA)
         silly_kernel<<<1,1>>>(a);
         LogGPUElapsedTime(s, mytimer);
@@ -83,6 +88,12 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
         }
         std::cout<<s<<" ";
         LogTimeTaken(mytimer);
+#elif _OPENACC
+        #pragma acc create(a[:N])
+        {
+        }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
 #elif defined(USEHIP) || defined(USECUDA)
         gpuMalloc(&a, N*sizeof(float)); 
         gpuFree(a);
@@ -97,6 +108,14 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
 #ifdef _OPENMP
         auto mytimer = NewTimer();
         #pragma omp target data map(to:a[:N])
+        {
+            
+        }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
+#elif defined(_OPENACC)
+        auto mytimer = NewTimer();
+        #pragma acc copyin(a[:N])
         {
             
         }
@@ -122,6 +141,14 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
         #pragma omp target data map(from:a[:N])
         {
 
+        }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
+#elif defined(_OPENACC)
+        auto mytimer = NewTimer();
+        #pragma acc copyout(a[:N])
+        {
+            
         }
         std::cout<<s<<" ";
         LogTimeTaken(mytimer);
@@ -175,6 +202,9 @@ void warmup_kernel_over_rounds(int rounds, int sleeptime, unsigned long long N)
 
 #ifdef _OPENMP 
     deviceCount = omp_get_num_devices();
+#elif defined(_OPENACC)
+    deviceCount = acc_get_num_devices();
+    auto dtype = acc_get_device_type();
 #elif defined(USEHIP) || defined(USECUDA)
     gpuGetDeviceCount(&deviceCount);
 #endif
@@ -186,6 +216,8 @@ void warmup_kernel_over_rounds(int rounds, int sleeptime, unsigned long long N)
         // set the device 
 #ifdef _OPENMP 
             omp_set_default_device(i);
+#elif defined(_OPENACC)
+            acc_set_device_num(i,dtype);
 #elif defined(USEHIP) || defined(USECUDA)
             gpuSetDevice(i);
 #endif
@@ -286,7 +318,7 @@ std::map<std::string, double> run_kernel(int offset)
     // LogTimeTaken(tall);
     telapsed = GetTimeTaken(tall,__func__, std::to_string(__LINE__));
     timings.insert({std::string("omp_target"), telapsed});
-#elif defined(USEOPENACC)
+#elif defined(_OPENACC)
 #elif defined(USEHIP) || defined(USECUDA)
     auto talloc = NewTimer();
     gpuMalloc(&d_x, N*sizeof(float)); 

@@ -34,6 +34,12 @@ CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenmp --offload-arch=gfx908 -fopenmp-
 #DEFS =
 endif
 
+ifeq ($(buildtype), hipacc)
+CXX = amdclang++
+CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenacc --offload-arch=gfx908 -fopenacc-targets=amdgcn-amd-amdhsa -march=gfx908
+#DEFS =
+endif
+
 CXXFLAGS += $(DEFS) 
 INCDIR = -I$(shell pwd)/../profile_util/include/ -Iinclude/ 
 LDFLAGS = -L$(shell pwd)/../profile_util/lib/
