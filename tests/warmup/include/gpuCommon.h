@@ -10,6 +10,10 @@
 #include <omp.h>
 #endif
 
+#ifdef _OPENACC
+#include <openacc.h>
+#endif
+
 #ifdef USEHIP
 
 #include <hip/hip_runtime.h>

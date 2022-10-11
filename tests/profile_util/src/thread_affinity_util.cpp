@@ -87,31 +87,22 @@ namespace profiling_util {
         s += "OpenMP version " + std::to_string(_OPENMP);
         s += " with total number of threads = " + std::to_string(omp_get_max_threads());
         s += " with total number of allowed levels " + std::to_string(omp_get_max_active_levels());
-#ifdef _WITH_GPU
         int numdevices = omp_get_num_devices();
         int defaultdevice = omp_get_default_device();
-        int ninfo[2];
+        s += " OpenMP Target : ";
+        s += "Number of devices " + std::to_string(numdevices);
+        s += "\n";
+#endif
+#ifdef _OPENACC
+        s += "OpenACC version " + std::to_string(_OPENACC);
+        auto dtype = acc_get_device_type();
+        int numdevices = acc_get_num_devices(dtype);
         if (numdevices > 0) 
         {
-            #pragma omp target map(tofrom:ninfo)
-            {
-                int team = omp_get_team_num();
-                int tid = omp_get_thread_num();
-                if (tid == 0 && team == 0)
-                {
-                    auto nteams = omp_get_num_teams();
-                    auto nthreads = omp_get_num_threads();
-                    ninfo[0] = nteams;
-                    ninfo[1] = nthreads;
-                }
-            }
             s += "\n";
-            s += "OpenMP Target : ";
-            s += "Number of devices "+ std::to_string(numdevices);
-            s += "Default device "+ std::to_string(defaultdevice);
-            s += "Number of Compute Units "+ std::to_string(ninfo[1]);
+            s += "OpenACC : ";
+            s += "Number of devices " + std::to_string(numdevices);
         }
-#endif
         s += "\n";
 #endif
 #ifdef USEHIP 

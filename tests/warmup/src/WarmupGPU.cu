@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cmath>
 
-#ifndef _OPENMP
+#if defined(USEHIP) || defined(USECUDA)
 /// standard scalar a * vector x plus vector y 
 __global__
 void saxpy(int n, float a, float *x, float *y)
@@ -65,6 +65,11 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
         // }
         std::cout<<s<<" ";
         LogTimeTaken(mytimer);
+#elif defined(_OPENACC)
+        #pragma acc parallel loop
+            for (int i = 0; i < 2; i++) {a[i] + 2*a[i];}
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
 #elif defined(USEHIP) || defined(USECUDA)
         silly_kernel<<<1,1>>>(a);
         LogGPUElapsedTime(s, mytimer);
@@ -83,6 +88,12 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
         }
         std::cout<<s<<" ";
         LogTimeTaken(mytimer);
+#elif _OPENACC
+        #pragma acc kernels create(a[:N])
+        {
+        }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
 #elif defined(USEHIP) || defined(USECUDA)
         gpuMalloc(&a, N*sizeof(float)); 
         gpuFree(a);
@@ -97,6 +108,14 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
 #ifdef _OPENMP
         auto mytimer = NewTimer();
         #pragma omp target data map(to:a[:N])
+        {
+            
+        }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
+#elif defined(_OPENACC)
+        auto mytimer = NewTimer();
+        #pragma acc kernels copyin(a[:N])
         {
             
         }
@@ -125,6 +144,14 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
         }
         std::cout<<s<<" ";
         LogTimeTaken(mytimer);
+#elif defined(_OPENACC)
+        auto mytimer = NewTimer();
+        #pragma acc kernels copyout(a[:N])
+        {
+            
+        }
+        std::cout<<s<<" ";
+        LogTimeTaken(mytimer);
 #elif defined(USEHIP) || defined(USECUDA)
         gpuMalloc(&b, N*sizeof(float)); 
         auto mytimer = NewTimer();
@@ -136,29 +163,47 @@ void launch_warmup_kernel(int itype, int i, int j, unsigned long long N)
     }
 }
 
-void warmup_kernel_over_kernels(int rounds, unsigned long long N)
+inline int GetNumDevices()
 {
     int deviceCount = 0;
-    std::cout<<__func__<<" running "<<std::endl;
-    auto timeWarmup = NewTimer();
-
 #ifdef _OPENMP 
     deviceCount = omp_get_num_devices();
+#elif defined(_OPENACC)
+    auto dtype = acc_get_device_type();
+    deviceCount = acc_get_num_devices(dtype);
 #elif defined(USEHIP) || defined(USECUDA)
     gpuGetDeviceCount(&deviceCount);
 #endif
+    return deviceCount;
+}
 
+inline void SetDevice(int i)
+{
+#ifdef _OPENMP 
+    omp_set_default_device(i);
+#elif defined(_OPENACC)
+    auto dtype = acc_get_device_type();
+    acc_set_device_num(i,dtype);
+#elif defined(USEHIP) || defined(USECUDA)
+    gpuSetDevice(i);
+#endif
+}
+
+void warmup_kernel_over_kernels(int rounds, 
+    std::vector<int> kernel_order,
+    unsigned long long N
+)
+{
+    int deviceCount = GetNumDevices();
+    std::cout<<__func__<<" running "<<std::endl;
+    auto timeWarmup = NewTimer();
     for (auto i=0;i<deviceCount;i++) 
     {
         // set the device 
-#ifdef _OPENMP 
-        omp_set_default_device(i);
-#elif defined(USEHIP) || defined(USECUDA)
-        gpuSetDevice(i);
-#endif
+        SetDevice(i);
         for (auto j=0;j<rounds;j++) 
         {
-            for (auto itype=0;itype<GPU_ONLY_NUM_LAUNCH_TYPES;itype++) 
+            for (auto itype:kernel_order) 
             {
                 launch_warmup_kernel(itype, i, j, N);
             }
@@ -169,26 +214,15 @@ void warmup_kernel_over_kernels(int rounds, unsigned long long N)
 
 void warmup_kernel_over_rounds(int rounds, int sleeptime, unsigned long long N)
 {
-    int deviceCount = 0;
+    int deviceCount = GetNumDevices();
     std::cout<<__func__<<" running "<<std::endl;
     auto timeWarmup = NewTimer();
-
-#ifdef _OPENMP 
-    deviceCount = omp_get_num_devices();
-#elif defined(USEHIP) || defined(USECUDA)
-    gpuGetDeviceCount(&deviceCount);
-#endif
-
     for (auto itype=0;itype<GPU_ONLY_NUM_LAUNCH_TYPES;itype++) 
     {
         for (auto i=0;i<deviceCount;i++) 
         {
-        // set the device 
-#ifdef _OPENMP 
-            omp_set_default_device(i);
-#elif defined(USEHIP) || defined(USECUDA)
-            gpuSetDevice(i);
-#endif
+            // set the device 
+            SetDevice(i);
             for (auto j=0;j<rounds;j++) 
             {
                 launch_warmup_kernel(itype, i, j, N);
@@ -201,25 +235,18 @@ void warmup_kernel_over_rounds(int rounds, int sleeptime, unsigned long long N)
 
 void run_on_devices(Logger &logger, int Niter)
 {
-    int deviceCount = 0;
-#ifdef _OPENMP 
-    deviceCount = omp_get_num_devices();
-#elif defined(USEHIP) || defined(USECUDA) 
-    gpuGetDeviceCount(&deviceCount);
-#endif
+    int deviceCount = GetNumDevices();
     for (auto i=0;i<deviceCount;i++) 
     {
-#ifdef _OPENMP 
-        omp_set_default_device(i);
-#elif defined(USEHIP) || defined(USECUDA) 
-        gpuSetDevice(i);
-#endif
+        SetDevice(i);
         // now check the kernel launches
         std::vector<double> times;
         std::map<std::string, std::vector<double>> device_times;
         std::vector<double> x;
 #ifdef _OPENMP 
         device_times.insert({"omp_target",x});
+#elif defined(_OPENACC)
+        device_times.insert({"acc_target",x});
 #elif defined(USEHIP) || defined(USECUDA) 
         device_times.insert({"allocation",x});
         device_times.insert({"tH2D",x});
@@ -286,7 +313,12 @@ std::map<std::string, double> run_kernel(int offset)
     // LogTimeTaken(tall);
     telapsed = GetTimeTaken(tall,__func__, std::to_string(__LINE__));
     timings.insert({std::string("omp_target"), telapsed});
-#elif defined(USEOPENACC)
+#elif defined(_OPENACC)
+    auto tall = NewTimer();
+    #pragma acc parallel loop copyin(x[:N],y[:N]) copyout(out[:N])
+    for (int i=0;i<N;i++) out[i] = x[i] + y[i];
+    telapsed = GetTimeTaken(tall,__func__, std::to_string(__LINE__));
+    timings.insert({std::string("acc_target"), telapsed});
 #elif defined(USEHIP) || defined(USECUDA)
     auto talloc = NewTimer();
     gpuMalloc(&d_x, N*sizeof(float)); 

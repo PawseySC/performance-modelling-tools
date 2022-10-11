@@ -22,6 +22,12 @@ CXX = nvc++
 CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS) -mp=gpu -Minfo=mp -gpu=cc70
 endif
 
+ifeq ($(buildtype), cudaacc)
+CXX = nvc++
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS) -acc -gpu=cc70
+#DEFS = -D_OPENACC
+endif
+
 ifeq ($(buildtype), cudahip)
 CXX = hipcc
 CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS) 
@@ -31,6 +37,12 @@ endif
 ifeq ($(buildtype), hipomp)
 CXX = amdclang++
 CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenmp --offload-arch=gfx908 -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
+#DEFS =
+endif
+
+ifeq ($(buildtype), hipacc)
+CXX = amdclang++
+CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenacc --offload-arch=gfx908 -fopenacc-targets=amdgcn-amd-amdhsa -march=gfx908
 #DEFS =
 endif
 
@@ -71,6 +83,14 @@ $(EXE) : $(OBJS)
 	@echo -e "export LD_LIBRARY_PATH=$(shell pwd)/../profile_util/lib/:\044LD_LIBRARY_PATH"
 
 ifeq ($(buildtype), cudaomp)
+obj/WarmupGPU.o: src/WarmupGPU.cu include/*.h 
+	cp src/WarmupGPU.cu src/WarmupGPU.cpp ;
+	$(CXX) $(CXXFLAGS) $(INCDIR) -c src/WarmupGPU.cpp -o obj/WarmupGPU.o ;
+	rm src/WarmupGPU.cpp ;
+obj/%.o: src/%.cpp include/*.h 
+	$(CXX) $(CXXFLAGS) $(INCDIR) -c $< -o $@
+endif
+ifeq ($(buildtype), cudaacc)
 obj/WarmupGPU.o: src/WarmupGPU.cu include/*.h 
 	cp src/WarmupGPU.cu src/WarmupGPU.cpp ;
 	$(CXX) $(CXXFLAGS) $(INCDIR) -c src/WarmupGPU.cpp -o obj/WarmupGPU.o ;

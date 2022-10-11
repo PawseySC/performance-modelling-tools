@@ -19,6 +19,16 @@ Compilation will place a binary `warm_up_test.${buildtype}.exe` in the `bin/` di
 export LD_LIBRARY_PATH=$(pwd)/../profile_util/lib/:$LD_LIBRARY_PATH
 ```
 
+The code can accept up to three args
+1. Number of rounds of warm-up. Default is 2.
+2. Number of iterations of the full kernel to run. Default is 100. 
+3. How to run the warm up kernel. Default is 0.
+  - 0: run each simple device instruction for N rounds
+  - 1: run rounds of kernel instructions going from a kernel launch, alloc, host to device, device to host. 
+  - 2: run rounds of kernel instructions: alloc, host to device, device to host, kernel launch.
+  - 3: run rounds of kernel instructions: host to device, device to host, kernel launch. alloc.
+  - 4: run rounds of kernel instructions: device to host, kernel launch, alloc, host to device.
+
 The code will then report information about what parallelism is present, what devices it sees, how it is running, etc. An example output is 
 ```
 @main L30

@@ -38,6 +38,12 @@
 #ifdef _OPENMP 
 #include <omp.h>
 #endif
+
+#ifdef _OPENACC
+#include <openacc.h>
+#endif
+
+
 /// \defgroup GPU related define statements 
 //@{
 #ifdef USEHIP
