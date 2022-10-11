@@ -39,7 +39,10 @@ void launch_warmup_kernel(int itype, int device_id, int round_id, unsigned long 
 /// @brief run several rounds of instructions, swaping kernels within a given round 
 /// @param rounds number of rounds, default 2
 /// @param N size of vectors used in allocation
-void warmup_kernel_over_kernels(int rounds = 2, unsigned long long N = 1048576);
+void warmup_kernel_over_kernels(int rounds = 2, 
+    std::vector<int> kernel_order = {GPU_ONLY_KERNEL_LAUNCH, GPU_ONLY_MEM_ALLOCATE, GPU_ONLY_MEM_TH2D, GPU_ONLY_MEM_TD2H}, 
+    unsigned long long N = 1048576
+);
 /// @brief run several rounds of instructions doing rounds before swapping kernel type
 /// @param rounds number of rounds
 /// @param sleeptime whether to sleep between rounds 

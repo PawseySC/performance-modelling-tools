@@ -37,7 +37,7 @@ std::string Logger::ReportGPUSetup(){
     std::string s;
 #ifdef _OPENMP 
     s = "OpenMP Target Offloading";
-#elif defined(_OPENMP) 
+#elif defined(_OPENACC) 
     s = "OpenACC Target Offloading";
 #elif defined(USEHIP)
     s = "HIP";
