@@ -3,6 +3,8 @@
 #include <cmath>
 
 #if defined(USEHIP) || defined(USECUDA)
+/// \defgroup kernels
+//@{
 /// standard scalar a * vector x plus vector y 
 __global__
 void saxpy(int n, float a, float *x, float *y)
@@ -10,7 +12,6 @@ void saxpy(int n, float a, float *x, float *y)
   int i = blockIdx.x*blockDim.x + threadIdx.x;
   if (i < n) y[i] = a*x[i] + y[i];
 }
-
 
 /// just a vector add to new vector
 __global__
@@ -21,8 +22,12 @@ void vector_add(float *out, float *a, float *b, int n)
     // Make sure we do not go out of bounds
     if (id < n) out[id] = a[id] + b[id];
 }
+//@}
 #endif
 
+/// \defgroup inlines
+/// inline functions that are useful for abstracting some of the desired API away. 
+//@{
 inline int GetNumDevices()
 {
     int deviceCount = 0;
@@ -132,6 +137,7 @@ inline void transfer_host_device(int N, float *x, float *y, float *d_x, float *d
 #endif
 #endif
 }
+//@}
 
 void run_on_devices(Logger &logger, int Niter, int N)
 {
@@ -151,6 +157,8 @@ void run_on_devices(Logger &logger, int Niter, int N)
     // Number of thread blocks in grid
     gridSize = static_cast<int>(ceil(static_cast<float>(N)/blockSize));
 
+    // if using CUDA or HIP, use c++ threads to run gpu instructions asynchronously
+    // for true multi-gpu usage
 #if defined(USECUDA) || defined(USEHIP)
     for (unsigned int device_id = 0; device_id < deviceCount; device_id++)
     {
@@ -189,6 +197,8 @@ void run_on_devices(Logger &logger, int Niter, int N)
     // join threads having launched stuff on gpus 
     for (auto &thread: threads) thread.join ();
 #endif
+
+    // run the openmp version of multi gpu 
 #ifdef _OPENMP 
     #pragma omp parallel num_threads(deviceCount)
     {
@@ -226,6 +236,11 @@ void run_on_devices(Logger &logger, int Niter, int N)
         deallocate_mem_on_device(d_x, d_y, d_out);
 #endif
     }
+#endif
+
+#ifdef _OPENACC
+    std::cout<<"Multigpu pure OpenACC still not implemented. Exiting"<<std::endl;
+    exit(9);
 #endif
 
     for (unsigned int i = 0; i < alltimes.size(); i++)
