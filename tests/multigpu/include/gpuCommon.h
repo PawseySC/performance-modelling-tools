@@ -23,8 +23,9 @@
 #define gpuMemGetInfo hipMemGetInfo
 #define gpuMalloc hipMalloc
 #define gpuFree hipFree
-#define gpuHostAlloc hipHostMalloc
+#define gpuHostAlloc(ptr, size) hipHostMalloc(ptr, size)
 #define gpuHostFree hipHostFree
+#define gpuFreeAsync hipHostFree
 #define gpuMemcpy hipMemcpy
 #define gpuMemcpyAsync hipMemcpyAsync
 #define gpuMemcpyHostToDevice hipMemcpyHostToDevice
@@ -45,8 +46,9 @@
 #define gpuMemGetInfo cudaMemGetInfo
 #define gpuMalloc cudaMalloc
 #define gpuFree cudaFree
-#define gpuHostAlloc cudaHostAlloc
+#define gpuHostAlloc(ptr, size) cudaHostAlloc(ptr, size, cudaHostAllocDefault)
 #define gpuHostFree cudaHostFree
+#define gpuFreeAsync(ptr) cudaFreeAsync(ptr, 0)
 #define gpuMemcpy cudaMemcpy
 #define gpuMemcpyAsync cudaMemcpyAsync
 #define gpuMemcpyHostToDevice cudaMemcpyHostToDevice

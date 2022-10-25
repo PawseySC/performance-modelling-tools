@@ -7,38 +7,45 @@ CXX = gcc
 
 ifeq ($(buildtype), cuda)
 CXX = nvcc
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS)
-DEFS = -DUSECUDA
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS)
+DEFS = -DUSECUDA -DRUNWITHOUTALLOC
 endif
 
 ifeq ($(buildtype), hip)
 CXX = hipcc
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS)
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS)
 DEFS = -DUSEHIP 
 endif
 
 ifeq ($(buildtype), cudaomp)
 CXX = nvc++
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS) -mp=gpu -Minfo=mp -gpu=cc70
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS) -mp=gpu -Minfo=mp -gpu=cc70
+endif
+
+ifeq ($(buildtype), cudaompgcc)
+CXX = g++
+CXXFLAGS = -fPIC -std=c++17 $(OPTFLAGS) -fopenmp
+#DEFS=-DRUNWITHOUTRANSFER
+DEFS=-DRUNWITHOUTALLOC
 endif
 
 ifeq ($(buildtype), cudaacc)
 CXX = nvc++
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS) -acc -gpu=cc70
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS) -acc -gpu=cc70
 #DEFS = -D_OPENACC
 endif
 
 ifeq ($(buildtype), cudahip)
 CXX = hipcc
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS) 
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS) 
 DEFS = -DUSEHIP
 endif
 
 ifeq ($(buildtype), hipomp)
 #CXX = /opt/rocm/bin/amdclang++
-CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenmp --offload-arch=gfx90a -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a
+CXXFLAGS = -std=c++17 -fPIC $(OPTFLAGS) -fopenmp --offload-arch=gfx90a -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a
 CXX = CC
-#CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenmp 
+#CXXFLAGS = -std=c++17 -fPIC $(OPTFLAGS) -fopenmp 
 #--offload-arch=gfx90a -fopenmp-targets=amdgcn-amd-amdhsa
 #--offload-arch=gfx90a -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a
 #DEFS =
@@ -46,7 +53,7 @@ endif
 
 ifeq ($(buildtype), hipacc)
 CXX = CC
-CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenacc 
+CXXFLAGS = -std=c++17 -fPIC $(OPTFLAGS) -fopenacc 
 #--offload-arch=gfx90a -fopenacc-targets=amdgcn-amd-amdhsa -march=gfx90a
 #DEFS =
 endif
@@ -88,6 +95,14 @@ $(EXE) : $(OBJS)
 	@echo -e "export LD_LIBRARY_PATH=$(shell pwd)/../profile_util/lib/:\044LD_LIBRARY_PATH"
 
 ifeq ($(buildtype), cudaomp)
+obj/multiGPU.o: src/multiGPU.cu include/*.h 
+	cp src/multiGPU.cu src/multiGPU.cpp ;
+	$(CXX) $(CXXFLAGS) $(INCDIR) -c src/multiGPU.cpp -o obj/multiGPU.o ;
+	rm src/multiGPU.cpp ;
+obj/%.o: src/%.cpp include/*.h 
+	$(CXX) $(CXXFLAGS) $(INCDIR) -c $< -o $@
+endif
+ifeq ($(buildtype), cudaompgcc)
 obj/multiGPU.o: src/multiGPU.cu include/*.h 
 	cp src/multiGPU.cu src/multiGPU.cpp ;
 	$(CXX) $(CXXFLAGS) $(INCDIR) -c src/multiGPU.cpp -o obj/multiGPU.o ;

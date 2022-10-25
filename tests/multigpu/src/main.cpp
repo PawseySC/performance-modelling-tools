@@ -31,10 +31,12 @@ int main(int argc, char** argv)
     LogBinding();
     auto runtype = logger.ReportGPUSetup();
     int Niter = 100;
+    int size = 1024*1024;
     if (argc >= 2) Niter = atoi(argv[1]);
+    if (argc >= 3) size = atoi(argv[2]);
 
     // run a kernel on all possible devices, report timings
-    run_on_devices(logger, Niter);
+    run_on_devices(logger, Niter, size);
 
     return 0;
 }
