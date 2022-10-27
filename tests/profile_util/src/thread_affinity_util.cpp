@@ -76,6 +76,7 @@ namespace profiling_util {
     {
         std::string s;
         s = "Parallel API's \n ======== \n";
+        int numdevices = 0;
 #ifdef _MPI
         int rank, size;
         MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -87,7 +88,7 @@ namespace profiling_util {
         s += "OpenMP version " + std::to_string(_OPENMP);
         s += " with total number of threads = " + std::to_string(omp_get_max_threads());
         s += " with total number of allowed levels " + std::to_string(omp_get_max_active_levels());
-        int numdevices = omp_get_num_devices();
+        numdevices = omp_get_num_devices();
         int defaultdevice = omp_get_default_device();
         s += " OpenMP Target : ";
         s += "Number of devices " + std::to_string(numdevices);
@@ -96,20 +97,15 @@ namespace profiling_util {
 #ifdef _OPENACC
         s += "OpenACC version " + std::to_string(_OPENACC);
         auto dtype = acc_get_device_type();
-        int numdevices = acc_get_num_devices(dtype);
-        if (numdevices > 0) 
-        {
-            s += "\n";
-            s += "OpenACC : ";
-            s += "Number of devices " + std::to_string(numdevices);
-        }
+        numdevices = acc_get_num_devices(dtype);
+        s += ": ";
+        s += "Number of devices " + std::to_string(numdevices);
         s += "\n";
 #endif
 #ifdef USEHIP 
-        int nDevices = 0;
-        hipGetDeviceCount(&nDevices);
-        s += "Running with HIP and found " + std::to_string(nDevices) + "\n";
-        for (auto i=0;i<nDevices;i++)
+        hipGetDeviceCount(&numdevices);
+        s += "Running with HIP and found " + std::to_string(numdevices) + "\n";
+        for (auto i=0;i<numdevices;i++)
         {
             hipDeviceProp_t prop;
             hipGetDeviceProperties(&prop, i);
@@ -122,10 +118,9 @@ namespace profiling_util {
         }
 #endif 
 #ifdef USECUDA
-        int nDevices = 0;
-        cudaGetDeviceCount(&nDevices);
-        s += "Running with CUDA and found " + std::to_string(nDevices) + "\n";
-        for (auto i=0;i<nDevices;i++)
+        cudaGetDeviceCount(&numdevices);
+        s += "Running with CUDA and found " + std::to_string(numdevices) + "\n";
+        for (auto i=0;i<numdevices;i++)
         {
             cudaDeviceProp prop;
             cudaGetDeviceProperties(&prop, i);

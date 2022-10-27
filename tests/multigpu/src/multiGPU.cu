@@ -159,7 +159,7 @@ void run_on_devices(Logger &logger, int Niter, int N)
 
     // if using CUDA or HIP, use c++ threads to run gpu instructions asynchronously
     // for true multi-gpu usage
-#if defined(USECUDA) || defined(USEHIP)
+#if defined(USECUDA) || defined(USEHIP) || defined(_OPENACC)
     for (unsigned int device_id = 0; device_id < deviceCount; device_id++)
     {
         threads.push_back (std::thread ([&,device_id] () 
@@ -168,6 +168,10 @@ void run_on_devices(Logger &logger, int Niter, int N)
 #if (defined(RUNWITHOUTALLOC) || defined(RUNWITHOUTTRANSFER))
             auto [x, y, out] = allocate_mem_on_host(N);
             auto [d_x, d_y, d_out] = allocate_mem_on_device(N);
+#if defined(_OPENACC)
+            #pragma acc data copyin(x[:N],y[:N]) copyout(out[:N])
+            {
+#endif
 #endif
             for (auto j=0;j<Niter;j++) 
             {
@@ -188,6 +192,9 @@ void run_on_devices(Logger &logger, int Niter, int N)
                 }
             }
 #if (defined(RUNWITHOUTALLOC) || defined(RUNWITHOUTTRANSFER))
+#ifdef _OPENACC 
+            }
+#endif
             deallocate_mem_on_host(x, y, out);
             deallocate_mem_on_device(d_x, d_y, d_out);
 #endif
@@ -199,7 +206,7 @@ void run_on_devices(Logger &logger, int Niter, int N)
 #endif
 
     // run the openmp version of multi gpu 
-#ifdef _OPENMP 
+#if defined(_OPENMP)
     #pragma omp parallel num_threads(deviceCount)
     {
 #if defined(RUNWITHOUTALLOC) || defined(RUNWITHOUTTRANSFER)
@@ -209,7 +216,12 @@ void run_on_devices(Logger &logger, int Niter, int N)
         auto tid = omp_get_thread_num();
         SetDevice(tid);
 #if (defined(RUNWITHOUTALLOC) || defined(RUNWITHOUTTRANSFER))
+#if defined(_OPENMP)
         #pragma omp target data map(to:x[:N],y[:N]) map(from:out[:N])
+#endif
+// #if defined(_OPENACC)
+//         #pragma acc data copyin(x[:N],y[:N]) copyout(out[:N])
+// #endif
 #endif
         {
             for (auto j=0;j<Niter;j++) 
@@ -238,10 +250,10 @@ void run_on_devices(Logger &logger, int Niter, int N)
     }
 #endif
 
-#ifdef _OPENACC
-    std::cout<<"Multigpu pure OpenACC still not implemented. Exiting"<<std::endl;
-    exit(9);
-#endif
+// #ifdef _OPENACC
+//     std::cout<<"Multigpu pure OpenACC still not implemented. Exiting"<<std::endl;
+//     exit(9);
+// #endif
 
     for (unsigned int i = 0; i < alltimes.size(); i++)
     {
@@ -277,8 +289,9 @@ std::map<std::string, double> run_kernel(int offset, int N, int gridSize, int bl
 #elif defined(_OPENACC)
     // running with openacc
     auto tall = NewTimer();
-    #pragma acc parallel loop copyin(x[:N],y[:N]) copyout(out[:N]) 
+    #pragma acc data copyin(x[:N],y[:N]) copyout(out[:N])
     {
+        #pragma acc parallel loop gang vector 
         for (int i=0;i<N;i++) out[i] = x[i] + y[i];
     }
     telapsed = GetTimeTaken(tall,__func__, std::to_string(__LINE__));
@@ -341,10 +354,10 @@ std::map<std::string, double> run_kernel_without_allocation(
     timings.insert({std::string("omp_target_no_alloc"), telapsed});
 #elif defined(_OPENACC)
     auto tall = NewTimer();
-    #pragma acc parallel loop 
-    {
-        for (int i=0;i<N;i++) out[i] = x[i] + y[i];
-    }
+    #pragma acc update device(x[:N], y[:N])
+    #pragma acc parallel loop gang vector 
+    for (int i=0;i<N;i++) out[i] = x[i] + y[i];
+    #pragma acc update self(out[:N])
     telapsed = GetTimeTaken(tall,__func__, std::to_string(__LINE__));
     timings.insert({std::string("acc_target_no_alloc"), telapsed});
 
@@ -388,10 +401,8 @@ std::map<std::string, double> run_kernel_without_transfer(
     timings.insert({std::string("omp_target_no_transfer"), telapsed});
 #elif defined(_OPENACC)
     auto tall = NewTimer();
-    #pragma acc parallel loop 
-    {
-        for (int i=0;i<N;i++) out[i] = x[i] + y[i];
-    }
+    #pragma acc parallel loop gang vector
+    for (int i=0;i<N;i++) out[i] = x[i] + y[i];
     telapsed = GetTimeTaken(tall,__func__, std::to_string(__LINE__));
     timings.insert({std::string("acc_target"), telapsed});
 #elif defined(USEHIP) || defined(USECUDA)

@@ -1,5 +1,5 @@
 buildtype ?= omp
-DEFS = -DUSEOPENMP
+DEFS = -DRUNWITHOUTALLOC
 OPTFLAGS = -O2
 CXXFLAGS = -fPIC -std=c++17 $(OPTFLAGS) -fopenmp
 CXX = gcc
@@ -14,31 +14,38 @@ endif
 ifeq ($(buildtype), hip)
 CXX = hipcc
 CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS)
-DEFS = -DUSEHIP 
+DEFS = -DUSEHIP -DRUNWITHOUTALLOC
 endif
 
-ifeq ($(buildtype), cudaomp)
+ifeq ($(buildtype), nvomp)
 CXX = nvc++
 CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS) -mp=gpu -Minfo=mp -gpu=cc70
 endif
 
-ifeq ($(buildtype), cudaompgcc)
+ifeq ($(buildtype), gccomp)
 CXX = g++
 CXXFLAGS = -fPIC -std=c++17 $(OPTFLAGS) -fopenmp
-#DEFS=-DRUNWITHOUTRANSFER
-DEFS=-DRUNWITHOUTALLOC
 endif
 
-ifeq ($(buildtype), cudaacc)
+ifeq ($(buildtype), nvacc)
 CXX = nvc++
 CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS) -acc -gpu=cc70
-#DEFS = -D_OPENACC
+endif
+
+ifeq ($(buildtype), nvompacc)
+CXX = nvc++
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS) -mp -Minfo=mp -acc -gpu=cc70
+endif
+
+ifeq ($(buildtype), gccacc)
+CXX = g++
+CXXFLAGS = -fPIC -std=c++17 $(OPTFLAGS) -fopenacc
 endif
 
 ifeq ($(buildtype), cudahip)
 CXX = hipcc
 CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++17 $(OPTFLAGS) 
-DEFS = -DUSEHIP
+DEFS = -DUSEHIP -DRUNWITHOUTALLOC
 endif
 
 ifeq ($(buildtype), hipomp)
@@ -61,12 +68,6 @@ endif
 CXXFLAGS += $(DEFS) 
 INCDIR = -I$(shell pwd)/../profile_util/include/ -Iinclude/ 
 LDFLAGS = -L$(shell pwd)/../profile_util/lib/
-#ifeq ($(buildtype), hip)
-#LDFLAGS += -Wl,-rpath=$(shell pwd)/../profile_util/lib/
-#endif
-# ifeq ($(buildtype), omp)
-# LDFLAGS += -Wl,-rpath=$(shell pwd)/../profile_util/lib/
-# endif
 LIBS = -lprofile_util_$(buildtype)
 
 # Target executable name:
@@ -94,7 +95,7 @@ $(EXE) : $(OBJS)
 	@echo "To run code ensure that you add the following to the environment"
 	@echo -e "export LD_LIBRARY_PATH=$(shell pwd)/../profile_util/lib/:\044LD_LIBRARY_PATH"
 
-ifeq ($(buildtype), cudaomp)
+ifeq ($(buildtype), nvomp)
 obj/multiGPU.o: src/multiGPU.cu include/*.h 
 	cp src/multiGPU.cu src/multiGPU.cpp ;
 	$(CXX) $(CXXFLAGS) $(INCDIR) -c src/multiGPU.cpp -o obj/multiGPU.o ;
@@ -102,7 +103,7 @@ obj/multiGPU.o: src/multiGPU.cu include/*.h
 obj/%.o: src/%.cpp include/*.h 
 	$(CXX) $(CXXFLAGS) $(INCDIR) -c $< -o $@
 endif
-ifeq ($(buildtype), cudaompgcc)
+ifeq ($(buildtype), gccomp)
 obj/multiGPU.o: src/multiGPU.cu include/*.h 
 	cp src/multiGPU.cu src/multiGPU.cpp ;
 	$(CXX) $(CXXFLAGS) $(INCDIR) -c src/multiGPU.cpp -o obj/multiGPU.o ;
@@ -110,7 +111,23 @@ obj/multiGPU.o: src/multiGPU.cu include/*.h
 obj/%.o: src/%.cpp include/*.h 
 	$(CXX) $(CXXFLAGS) $(INCDIR) -c $< -o $@
 endif
-ifeq ($(buildtype), cudaacc)
+ifeq ($(buildtype), nvacc)
+obj/multiGPU.o: src/multiGPU.cu include/*.h 
+	cp src/multiGPU.cu src/multiGPU.cpp ;
+	$(CXX) $(CXXFLAGS) $(INCDIR) -c src/multiGPU.cpp -o obj/multiGPU.o ;
+	rm src/multiGPU.cpp ;
+obj/%.o: src/%.cpp include/*.h 
+	$(CXX) $(CXXFLAGS) $(INCDIR) -c $< -o $@
+endif
+ifeq ($(buildtype), nvompacc)
+obj/multiGPU.o: src/multiGPU.cu include/*.h 
+	cp src/multiGPU.cu src/multiGPU.cpp ;
+	$(CXX) $(CXXFLAGS) $(INCDIR) -c src/multiGPU.cpp -o obj/multiGPU.o ;
+	rm src/multiGPU.cpp ;
+obj/%.o: src/%.cpp include/*.h 
+	$(CXX) $(CXXFLAGS) $(INCDIR) -c $< -o $@
+endif
+ifeq ($(buildtype), gccacc)
 obj/multiGPU.o: src/multiGPU.cu include/*.h 
 	cp src/multiGPU.cu src/multiGPU.cpp ;
 	$(CXX) $(CXXFLAGS) $(INCDIR) -c src/multiGPU.cpp -o obj/multiGPU.o ;
