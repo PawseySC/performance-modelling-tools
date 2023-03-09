@@ -10,7 +10,7 @@ comparesums.exe:
 	$(NVCC) $(CFLAGS) -DBLOCK_X=$(BLOCKSIZE) -DSIZE=$(SIZE) sum.cu -o comparesums.exe
 
 clean:
-	rm ./comparesums
+	rm ./comparesums.exe
 
 
 .PHONY: clean
