@@ -3,19 +3,19 @@
 ## Overview
 This example is meant to demonstrate one use-case for the [`atomicAdd`](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomicadd) operation on GPUs. We are specifically interested in highlighting the differences in performance and in the results of the summation of an array of floating point values. From the [CUDA-C programming guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions) :
 
-<center> 
-*An atomic function performs a read-modify-write atomic operation on one 32-bit or 64-bit word residing in global or shared memory ... 
-For example, atomicAdd() reads a word at some address in global or shared memory, adds a number to it, and writes the result back to the same address.*
-</center>
+
+*"An atomic function performs a read-modify-write atomic operation on one 32-bit or 64-bit word residing in global or shared memory ... 
+For example, atomicAdd() reads a word at some address in global or shared memory, adds a number to it, and writes the result back to the same address."*
+
 
 Further,
 
-<center>
-*The operation is atomic in the sense that it is guaranteed to be performed without interference from other threads. In other words, no other thread can access this address until the operation is complete. If an atomic instruction executed by a warp reads, modifies, and writes to the same location in global memory for more than one of the threads of the warp, each read/modify/write to that location occurs and they are all serialized, but the order in which they occur is undefined.* - [source](https://docs.nvidia.com/gameworks/content/developertools/desktop/analysis/report/cudaexperiments/kernellevel/memorystatisticsatomics.htm#:~:text=An%20atomic%20function%20performs%20a,back%20to%20the%20same%20address.)
-</center>
+
+*"The operation is atomic in the sense that it is guaranteed to be performed without interference from other threads. In other words, no other thread can access this address until the operation is complete. If an atomic instruction executed by a warp reads, modifies, and writes to the same location in global memory for more than one of the threads of the warp, each read/modify/write to that location occurs and they are all serialized, but the order in which they occur is undefined."* - [source](https://docs.nvidia.com/gameworks/content/developertools/desktop/analysis/report/cudaexperiments/kernellevel/memorystatisticsatomics.htm#:~:text=An%20atomic%20function%20performs%20a,back%20to%20the%20same%20address.)
 
 
-Order of operations for summations matter, specifically in cases where the magnitude of the numbers being added varies signficantly. This is demonstrated, in a somewhat dramatic sense, in [this interactive example](https://wandbox.org/permlink/GGR6EhdaViT1J0UR). We'll show by example how order of operations is not guaranteed on the GPU, which can lead to differences between reductions between CPU and GPU.
+
+Order of operations for summations matter, specifically in cases where the magnitude of the numbers being added varies signficantly. This is demonstrated, in a somewhat dramatic sense, in [this interactive example](https://wandbox.org/permlink/GGR6EhdaViT1J0UR). Because the order in which threads execute addition in the `atomicAdd` call, we should expect that summation on the GPU with `atomicAdd` will provide different results than a serial CPU application, and possibly between successive runs of the same application. 
 
 
 ## Explanation of the code
