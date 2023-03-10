@@ -1,7 +1,7 @@
 # atomicAdd Example
 
 ## Overview
-This example is meant to demonstrate one use-case for the [`atomicAdd`](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomicadd) operation on GPUs. We are specifically interested in highlighting the differences in performance and in the results of the summation of an array of floating point values. From the [CUDA-C programming guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions) :
+This example is meant to demonstrate one use-case for the [`atomicAdd`](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomicadd) operation on GPUs. We are specifically interested in highlighting the differences in performance and in the results of the summation of an array of floating point values. From the [GPU-C programming guide](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions) :
 
 
 *"An atomic function performs a read-modify-write atomic operation on one 32-bit or 64-bit word residing in global or shared memory ... 
@@ -19,7 +19,7 @@ Order of operations for summations matter, specifically in cases where the magni
 
 
 ## Explanation of the code
-In this atomicAdd example, we have a code (`sum.cu`) that creates a random array of `float`'s . The elements of the array vary in value between 0 and 1000. A sum of the array is done in serial on the CPU
+In this atomicAdd example, we have a code (`sum.cpp`) that creates a random array of `float`'s . The elements of the array vary in value between 0 and 1000. A sum of the array is done in serial on the CPU
 
 ```c
     for (int i = 0; i < SIZE; i++)
@@ -49,18 +49,24 @@ For both summations, the value held by the `result` pointer is initialized to ze
 
 
 ## Building & running the code
-In case you're interested in building and playing with this example, this section walks you through building the example and controlling its behavior. You can set two environment variables that 
+In case you're interested in building and playing with this example, this section walks you through building the example and controlling its behavior. 
 
-1. control the number of CUDA threads per block ( `BLOCKSIZE` ), and
+!!! note "Building on Mulan"
+    On Mulan, you will want to source the `mulan.env.sh` file before executing other steps. This will load the rocm module and set the `CC` environment variable to `hipcc`
+
+
+You can set two environment variables that 
+
+1. control the number of GPU threads per block ( `BLOCKSIZE` ), and
 2. control the size of the array that is reduced ( `SIZE` )
 
-By default, both `BLOCKSIZE` and `SIZE` are set to `64`; this results in a single CUDA block with 64 threads per block being used to reduce the random float array of size 64. As an example, you can do the following to build the code, customizing your own `BLOCKSIZE` and `SIZE` settings
+By default, both `BLOCKSIZE` and `SIZE` are set to `64`; this results in a single GPU block with 64 threads per block being used to reduce the random float array of size 64. As an example, you can do the following to build the code, customizing your own `BLOCKSIZE` and `SIZE` settings
 
 ```bash
 $ BLOCKSIZE=128 SIZE=1024 make
-nvcc  -DBLOCK_X=128 -DSIZE=1024 sum.cu -o comparesums.exe
+hipcc  -DBLOCK_X=128 -DSIZE=1024 sum.cpp -o comparesums.exe
 ```
-In this case, the array size is set to 1024 and the number of CUDA threads per block is set to 128; this would result in 8 CUDA blocks being run during execution of the kernel.
+In this case, the array size is set to 1024 and the number of GPU threads per block is set to 128; this would result in 8 GPU blocks being run during execution of the kernel.
 
 You can run the application by running the `./comparesums.exe` executable on a system with an Nvidia GPU (e.g. Topaz)
 
@@ -80,7 +86,7 @@ $ make clean
 rm *.exe
 
 $ BLOCKSIZE=256 SIZE=1024 make
-nvcc  -DBLOCK_X=256 -DSIZE=1024 sum.cu -o comparesums.exe
+hipcc  -DBLOCK_X=256 -DSIZE=1024 sum.cpp -o comparesums.exe
 ```
 
 ## Interpreting the output
@@ -97,7 +103,7 @@ The output of the code shows the execution time for both the CPU and GPU kernels
 ### Block Size = 64 and Array Size = 64
 ```
 $ make
-nvcc  -DBLOCK_X=64 -DSIZE=64 sum.cu -o comparesums.exe
+hipcc  -DBLOCK_X=64 -DSIZE=64 sum.cpp -o comparesums.exe
 
 $ ./comparesums.exe 
 CPU Time: 0.000719 ms, bandwidth: 0.712100 GB/s
@@ -114,7 +120,7 @@ Double the array size, but keep the block size fixed
 $ export SIZE=128
 $ make clean
 $ make
-nvcc  -DBLOCK_X=64 -DSIZE=128 sum.cu -o comparesums.exe
+hipcc  -DBLOCK_X=64 -DSIZE=128 sum.cpp -o comparesums.exe
 $ ./comparesums.exe 
 CPU Time: 0.001276 ms, bandwidth: 0.802508 GB/s
 
@@ -131,7 +137,7 @@ $ export BLOCKSIZE=128
 $ make clean
 rm ./comparesums.exe
 $ make
-nvcc  -DBLOCK_X=128 -DSIZE=128 sum.cu -o comparesums.exe
+hipcc  -DBLOCK_X=128 -DSIZE=128 sum.cpp -o comparesums.exe
 $ ./comparesums.exe 
 CPU Time: 0.001275 ms, bandwidth: 0.803137 GB/s
 
@@ -143,13 +149,13 @@ CPU result matches GPU result in naive atomic add. CPU: 68255.023438, GPU: 68255
 The results agree again, with some consistency between successive runs as well.
 
 ### Block Size = 128 and Array Size = 1024
-Here, we increase the array size to 1024, but leave the number of threads per GPU block at 128. This means that 8 CUDA blocks are used to execute the blocks.
+Here, we increase the array size to 1024, but leave the number of threads per GPU block at 128. This means that 8 GPU blocks are used to execute the blocks.
 ```
 $ export SIZE=1024
 $ make clean
 rm ./comparesums.exe
 $ make
-nvcc  -DBLOCK_X=128 -DSIZE=1024 sum.cu -o comparesums.exe
+hipcc  -DBLOCK_X=128 -DSIZE=1024 sum.cpp -o comparesums.exe
 $ ./comparesums.exe 
 CPU Time: 0.009418 ms, bandwidth: 0.869824 GB/s
 

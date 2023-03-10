@@ -1,5 +1,6 @@
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
+#include "hip/hip_runtime.h"
+
+//#include "device_launch_parameters.h"
 
 #include <chrono>
 #include <time.h>
@@ -18,7 +19,7 @@
 #endif
 
 
-cudaError_t reductionWithCuda(float *result, float *input);
+hipError_t reductionWithCuda(float *result, float *input);
 __global__ void reductionKernel(float *result, float *input);
 void reductionCPU(float *result, float *input);
 
@@ -59,7 +60,7 @@ int main()
     else
         printf("CPU result matches GPU result in naive atomic add. CPU: %f, GPU: %f\n", resultCPU, resultGPU);
 
-    cudaDeviceReset();
+    hipDeviceReset();
 
     return 0;
 }
@@ -84,14 +85,14 @@ __global__ void reductionKernel(float *result, float *input)
     }
 }
 
-cudaError_t reductionWithCuda(float *result, float *input)
+hipError_t reductionWithCuda(float *result, float *input)
 {
     dim3 dim_grid, dim_block;
 
     float *dev_input = 0;
     float *dev_result = 0;
-    cudaError_t cudaStatus;
-    cudaEvent_t start, stop;
+    hipError_t gpuStatus;
+    hipEvent_t start, stop;
     float elapsed = 0;
     double gpuBandwidth;
 
@@ -105,31 +106,31 @@ cudaError_t reductionWithCuda(float *result, float *input)
 
     printf("\n---block_x:%d, block_y:%d, dim_x:%d, dim_y:%d\n", dim_block.x, dim_block.y, dim_grid.x, dim_grid.y);
 
-    cudaSetDevice(0);
-    cudaMalloc((void**)&dev_input, SIZE * sizeof(float));
-    cudaMalloc((void**)&dev_result, sizeof(float));
-    cudaMemcpy(dev_input, input, SIZE * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_result, result, sizeof(float), cudaMemcpyHostToDevice);
+    hipSetDevice(0);
+    hipMalloc((void**)&dev_input, SIZE * sizeof(float));
+    hipMalloc((void**)&dev_result, sizeof(float));
+    hipMemcpy(dev_input, input, SIZE * sizeof(float), hipMemcpyHostToDevice);
+    hipMemcpy(dev_result, result, sizeof(float), hipMemcpyHostToDevice);
 
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
+    hipEventCreate(&start);
+    hipEventCreate(&stop);
 
-    cudaEventRecord(start);
-    reductionKernel<<< dim_grid, dim_block >>>(dev_result, dev_input);
+    hipEventRecord(start);
+    hipLaunchKernelGGL(reductionKernel, dim_grid, dim_block , 0, 0, dev_result, dev_input);
 
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
+    hipEventRecord(stop);
+    hipEventSynchronize(stop);
 
-    cudaEventElapsedTime(&elapsed, start, stop);
+    hipEventElapsedTime(&elapsed, start, stop);
 
     gpuBandwidth = (sizeof(float) * SIZE * 2) / (elapsed * 1000000);
     printf("GPU Time: %f ms, bandwidth: %f GB/s\n", elapsed, gpuBandwidth);
 
-    cudaDeviceSynchronize();
-    cudaStatus = cudaMemcpy(result, dev_result, sizeof(float), cudaMemcpyDeviceToHost);
+    hipDeviceSynchronize();
+    gpuStatus = hipMemcpy(result, dev_result, sizeof(float), hipMemcpyDeviceToHost);
 
-    cudaFree(dev_input);
-    cudaFree(dev_result);
+    hipFree(dev_input);
+    hipFree(dev_result);
 
-    return cudaStatus;
+    return gpuStatus;
 }

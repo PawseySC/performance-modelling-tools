@@ -1,13 +1,13 @@
 
 
-NVCC ?= nvcc
+CC ?= hipcc
 CFLAGS ?= 
 
 BLOCKSIZE ?= 64
 SIZE ?= 64
 
 comparesums.exe:
-	$(NVCC) $(CFLAGS) -DBLOCK_X=$(BLOCKSIZE) -DSIZE=$(SIZE) sum.cu -o comparesums.exe
+	$(CC) $(CFLAGS) -DBLOCK_X=$(BLOCKSIZE) -DSIZE=$(SIZE) sum.cpp -o comparesums.exe
 
 clean:
 	rm ./comparesums.exe
