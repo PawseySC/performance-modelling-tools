@@ -4,4 +4,4 @@ spack.lock
 *.o
 *.so
 *.exe
-
+imager_*

@@ -58,4 +58,5 @@ source ${PERFMODELING}/examples/blink_imager/topaz-v100/env.sh
 #```
 
 
-${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu || ${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu
+${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu
+#${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu || ${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu
