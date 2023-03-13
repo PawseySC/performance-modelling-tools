@@ -67,7 +67,21 @@ for N in "${NVALS[@]}"
 do
   for P in "${PVALS[@]}"
   do
-    nvprof --analysis-metrics -o cufft_blocks_$N_$P.nvprof \
+
+    # Get a hot spot and trace profile
+    nvprof -o cufft_blocks_${N}_${P}.nvprof \
+         ${REPO}/build_gpu/cufft_blocks -n $N \
+                                        -p $P \
+                                        -u u.fits \
+                                        -v v.fits \
+                                        -w w.fits \
+                                        -r chan_204_20200209T034646_vis_real.fits \
+                                        -i chan_204_20200209T034646_vis_imag.fits \
+                                        -f 1 > cufft_blocks_$N_$P.txt
+
+
+    # Get analysis metrics for detailed kernel profiling
+    nvprof --analysis-metrics -o cufft_blocks_${N}_${P}_metrics.nvprof \
          ${REPO}/build_gpu/cufft_blocks -n $N \
                                         -p $P \
                                         -u u.fits \
