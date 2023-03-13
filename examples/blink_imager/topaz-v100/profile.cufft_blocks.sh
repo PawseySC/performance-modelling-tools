@@ -27,6 +27,11 @@
 #
 # ///////////////////////////////////////////////////////////////////////// #
 
+#NVALS=(1 5 10 50 100)
+#PVALS=(180 1024 8182)
+NVALS=(10)
+PVALS=(8182)
+
 IMAGER_BRANCH="${IMAGER_BRANCH:-main}"
 PERFMODELING="${PERFMODELING:-$MYGROUP/performance-modelling-tools}"
 
@@ -55,12 +60,22 @@ module use /group/director2183/msok/software/centos7.6/modulefiles/
 mkdir -p ${odir}
 ln -s ${REPO}/build_gpu/*.fits ${odir}/
 
+
 # Run the code
 cd $odir
-${REPO}/build_gpu/cufft_blocks 10 180 u.fits v.fits w.fits chan_204_20200209T034646_vis_real.fits chan_204_20200209T034646_vis_imag.fits 1
+for N in "${NVALS[@]}"
+do
+  for P in "${PVALS[@]}"
+  do
+    nvprof --analysis-metrics -o cufft_blocks_$N_$P.nvprof \
+         ${REPO}/build_gpu/cufft_blocks -n $N \
+                                        -p $P \
+                                        -u u.fits \
+                                        -v v.fits \
+                                        -w w.fits \
+                                        -r chan_204_20200209T034646_vis_real.fits \
+                                        -i chan_204_20200209T034646_vis_imag.fits \
+                                        -f 1
 
-# 1024x1024: 
-#/group/director2183/data/test/ganiruddha/NEW_TEST/cuFFT_GITLAB_NCHANNELS/imager_devel/build/cufft_blocks 1 1024 u.fits v.fits w.fits chan_204_20200209T034646_vis_real.fits chan_204_20200209T034646_vis_imag.fits 1| tee out.txt
-
-# 8182x8182:
-#/group/director2183/data/test/ganiruddha/NEW_TEST/cuFFT_GITLAB_NCHANNELS/imager_devel/build/cufft_blocks 1 8182 u.fits v.fits w.fits chan_204_20200209T034646_vis_real.fits chan_204_20200209T034646_vis_imag.fits 1| tee out.txt
+  done
+done

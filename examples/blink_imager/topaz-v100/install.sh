@@ -43,20 +43,4 @@ git checkout ${IMAGER_BRANCH}
 source ${PERFMODELING}/examples/blink_imager/topaz-v100/env.sh
 
 # Build the code for gpu acceleration
-#
-# For some reason, we need to run the build twice. The first attempt fails
-# with the following error
-#
-#```
-#  [  6%] Building CUDA object CMakeFiles/cufft_blocks.dir/apps/cufft_blocks.cu.o
-#   /pawsey/centos7.6/devel/binary/cuda/11.4.2/bin/nvcc -forward-unknown-to-host-compiler -DIMAGER_HIP -D_UNIX  -O3 -DNDEBUG --generate-code=arch=compute_70,code=[compute_70,sm_70] -std=c++14 -x cu -c /group/director2183/jschoonover/performance-modelling-tools/examples/blink_imager/topaz-v100/imager_main/apps/cufft_blocks.cu -o CMakeFiles/cufft_blocks.dir/apps/cufft_blocks.cu.o
-#   /group/director2183/jschoonover/performance-modelling-tools/examples/blink_imager/topaz-v100/imager_main/apps/cufft_blocks.cu:125:10: fatal error: gridding_imaging_cuda.h: No such file or directory
-#    #include "gridding_imaging_cuda.h"
-#             ^~~~~~~~~~~~~~~~~~~~~~~~~
-#   compilation terminated.
-#   make[2]: *** [CMakeFiles/cufft_blocks.dir/apps/cufft_blocks.cu.o] Error 1
-#```
-
-
 ${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu
-#${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu || ${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu
