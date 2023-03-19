@@ -41,7 +41,7 @@ REPO="${cwd}/imager_${IMAGER_BRANCH}"
 
 # Source the environment included in this repository
 source ${PERFMODELING}/examples/blink_imager/topaz-v100/env.sh
-module load cuda
+module load cuda/11.1
 module load cascadelake slurm/20.02.3 gcc/8.3.0 cmake/3.18.0
 module use /group/director2183/software/centos7.6/modulefiles
 module load ds9
@@ -56,9 +56,18 @@ module load cmake/3.18.0
 module use /group/director2183/msok/software/centos7.6/modulefiles/
 
 
-# Link the input decks
+# load test data module to set ENV variables :
+module load blink_test_data/devel
+
+
+# Link in input decks
 mkdir -p ${odir}
-ln -s ${REPO}/build_gpu/*.fits ${odir}/
+cd $odir
+ln -s ${BLINK_TEST_DATADIR}/eda2/20200209/u.fits 
+ln -s ${BLINK_TEST_DATADIR}/eda2/20200209/v.fits 
+ln -s ${BLINK_TEST_DATADIR}/eda2/20200209/w.fits 
+ln -s ${BLINK_TEST_DATADIR}/eda2/20200209/chan_204_20200209T034646_vis_real.fits vis_real.fits
+ln -s ${BLINK_TEST_DATADIR}/eda2/20200209/chan_204_20200209T034646_vis_imag.fits vis_imag.fits
 
 
 # Run the code
@@ -68,28 +77,38 @@ do
   for P in "${PVALS[@]}"
   do
 
+    # cleaning old FITS files first :
+    echo "rm -f re_??.fits im_??.fits"
+    rm -f re_??.fits im_??.fits
+
     # Get a hot spot and trace profile
     nvprof -o cufft_blocks_${N}_${P}.nvprof \
          ${REPO}/build_gpu/cufft_blocks -n $N \
                                         -p $P \
-                                        -u u.fits \
-                                        -v v.fits \
-                                        -w w.fits \
-                                        -r chan_204_20200209T034646_vis_real.fits \
-                                        -i chan_204_20200209T034646_vis_imag.fits \
+                                        -F 1 \
                                         -f 1 > cufft_blocks_$N_$P.txt
 
+
+    # cleaning old FITS files first :
+    echo "rm -f re_??.fits im_??.fits"
+    rm -f re_??.fits im_??.fits
 
     # Get analysis metrics for detailed kernel profiling
     nvprof --analysis-metrics -o cufft_blocks_${N}_${P}_metrics.nvprof \
          ${REPO}/build_gpu/cufft_blocks -n $N \
                                         -p $P \
-                                        -u u.fits \
-                                        -v v.fits \
-                                        -w w.fits \
-                                        -r chan_204_20200209T034646_vis_real.fits \
-                                        -i chan_204_20200209T034646_vis_imag.fits \
+                                        -F 1 \
                                         -f 1
 
+
+    # cleaning old FITS files first :
+    echo "rm -f re_??.fits im_??.fits"
+    rm -f re_??.fits im_??.fits
+    # Generate profile for roofline modeling with Nsight
+    ncu --set full -c 10 -o cufft_blocks_${N}_${P}_profile \
+         ${REPO}/build_gpu/cufft_blocks -n $N \
+                                        -p $P \
+                                        -F 1 \
+                                        -f 1
   done
 done

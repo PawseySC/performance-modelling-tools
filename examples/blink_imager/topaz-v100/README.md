@@ -13,12 +13,17 @@ git clone git@github.com:PawseySC/performance-modelling-tools.git
 cd performance-modelling-tools/examples/blink_imager/topaz-v100
 ```
 
-2. Set the environment variable for the branch of the imager repository that you want to build. Currently, we recommmend using the `pacerSprint_joe` branch; this contains a necessary patch to `CMakeLists.txt` to build the `cufft_blocks` application.
+2. Allocate a node on Topaz
+```
+salloc -n1 -c 8 --threads-per-core=1 --partition=gpuq-dev --gres=gpu:1
+```
+
+3. Set the environment variable for the branch of the imager repository that you want to build. Currently, we recommmend using the `pacerSprint_joe` branch; this contains a necessary patch to `CMakeLists.txt` to build the `cufft_blocks` application.
 ```
 export IMAGER_BRANCH=pacerSprint_joe
 ```
 
-3. Run the installation script
+4. Run the installation script
 ```
 ./install.sh
 ```

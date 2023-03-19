@@ -42,5 +42,6 @@ git checkout ${IMAGER_BRANCH}
 # Source the environment included in this repository
 source ${PERFMODELING}/examples/blink_imager/topaz-v100/env.sh
 
+
 # Build the code for gpu acceleration
 ${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu
