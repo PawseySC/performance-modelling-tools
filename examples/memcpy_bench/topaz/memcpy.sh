@@ -18,11 +18,11 @@ echo $CUDA_HOME
 
 nvidia-smi topo -m
 
-git clone https://gitub.com/fluidnumerics/scientific-computing-edu
+git clone https://github.com/fluidnumerics/scientific-computing-edu
 cd scientific-computing-edu/samples/c++/memcpy
 
 make clean
 make memcpy_bench
 
 
-srun ./memcpy_bench
+./memcpy_bench
