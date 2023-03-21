@@ -27,22 +27,42 @@
 #
 # ///////////////////////////////////////////////////////////////////////// #
 
+N=10
+P=1024
 
 IMAGER_BRANCH="${IMAGER_BRANCH:-main}"
 PERFMODELING="${PERFMODELING:-$MYGROUP/performance-modelling-tools}"
 
 cwd=$(pwd)
-if [ ! -e imager_${IMAGER_BRANCH} ] ; then
- git clone git@146.118.67.64:blink/imager.git imager_${IMAGER_BRANCH}
-fi
-
-cd imager_${IMAGER_BRANCH}
-git checkout ${IMAGER_BRANCH}
-git pull
+odir="${cwd}/cufftblocks_run_$(date +"%Y-%m-%d-%H-%M")"
+REPO="${cwd}/imager_${IMAGER_BRANCH}"
 
 # Source the environment included in this repository
 source ${PERFMODELING}/examples/blink_imager/topaz-v100/env.sh
+module load cascadelake slurm/20.02.3 gcc/8.3.0 cmake/3.18.0
+module use /group/director2183/software/centos7.6/modulefiles
+module load ds9
+module load msfitslib/devel 
+module load msfitslib/devel libnova
+module load pal/0.9.8
+module load libnova/0.15.0
+module load cascadelake
+module load gcc/8.3.0
+module load cfitsio/3.48
+module load cmake/3.18.0
+module use /group/director2183/msok/software/centos7.6/modulefiles/
+module load fftw
+module load cuda
 
 
-# Build the code for gpu acceleration
-${cwd}/imager_${IMAGER_BRANCH}/build.sh gpu
+# load test data module to set ENV variables :
+module load blink_test_data/devel
+
+
+# Link in input decks
+cd ${REPO}/build_gpu
+# cleaning old FITS files first :
+echo "rm -f re_??.fits im_??.fits"
+rm -f re_??.fits im_??.fits
+
+${REPO}/tests/blink_test_cufft_blocks.sh $N $P 1

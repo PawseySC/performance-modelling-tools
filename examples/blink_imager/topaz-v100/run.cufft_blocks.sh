@@ -27,10 +27,6 @@
 #
 # ///////////////////////////////////////////////////////////////////////// #
 
-#NVALS=(1 5 10 50 100)
-#PVALS=(180 1024 8182)
-#NVALS=(20 30 40)
-#PVALS=(1024)
 NVALS=(5 10 20 30 40)
 PVALS=(1024 4096)
 
@@ -38,11 +34,18 @@ IMAGER_BRANCH="${IMAGER_BRANCH:-main}"
 PERFMODELING="${PERFMODELING:-$MYGROUP/performance-modelling-tools}"
 
 cwd=$(pwd)
-odir="${cwd}/cufftblocks_profile_${IMAGER_BRANCH}_$(date +"%Y-%m-%d-%H-%M")"
+timestamp=$(date +"%Y-%m-%d-%H-%M")
+odir="${cwd}/cufftblocks_run_${timestamp}"
 REPO="${cwd}/imager_${IMAGER_BRANCH}"
+
+# Get the git sha
+cd ${REPO}
+gitsha=$(git rev-parse HEAD | cut -c 1-8)
+cd ${cwd}
 
 # Source the environment included in this repository
 source ${PERFMODELING}/examples/blink_imager/topaz-v100/env.sh
+module load cuda/11.1
 module load cascadelake slurm/20.02.3 gcc/8.3.0 cmake/3.18.0
 module use /group/director2183/software/centos7.6/modulefiles
 module load ds9
@@ -55,8 +58,6 @@ module load gcc/8.3.0
 module load cfitsio/3.48
 module load cmake/3.18.0
 module use /group/director2183/msok/software/centos7.6/modulefiles/
-module load fftw
-module load cuda
 
 
 # load test data module to set ENV variables :
@@ -75,6 +76,8 @@ ln -s ${BLINK_TEST_DATADIR}/eda2/20200209/chan_204_20200209T034646_vis_imag.fits
 
 # Run the code
 cd $odir
+echo "timestamp, hostname, gitsha, kernel, N, P, time" > clocks_profile.csv
+
 for N in "${NVALS[@]}"
 do
   for P in "${PVALS[@]}"
@@ -85,33 +88,16 @@ do
     rm -f re_??.fits im_??.fits
 
     # Get a hot spot and trace profile
-    nvprof -o cufft_blocks_${N}_${P}.nvprof \
-         ${REPO}/build_gpu/cufft_blocks -n $N \
+    ${REPO}/build_gpu/cufft_blocks -n $N \
                                         -p $P \
                                         -F 1 \
                                         -f 1 > cufft_blocks_$N_$P.txt
 
-#
-#    # cleaning old FITS files first :
-#    echo "rm -f re_??.fits im_??.fits"
-#    rm -f re_??.fits im_??.fits
-#
-#    # Get analysis metrics for detailed kernel profiling
-#    nvprof --analysis-metrics -o cufft_blocks_${N}_${P}_metrics.nvprof \
-#         ${REPO}/build_gpu/cufft_blocks -n $N \
-#                                        -p $P \
-#                                        -F 1 \
-#                                        -f 1
+   gridding_time=$(grep "CLOCK gridding()" cufft_blocks_$N_$P.txt | awk -F " " '{print $5}')
+   echo "${timestamp}, $(hostname), ${gitsha}, gridding, $N, $P, $gridding_time" >> clocks_profile.csv
+   cufft_time=$(grep "CLOCK cufftPlanMany()" cufft_blocks_$N_$P.txt | awk -F " " '{print $5}')
+   echo "${timestamp}, $(hostname), ${gitsha}, cufft, $N, $P, $gridding_time" >> clocks_profile.csv 
 
 
-#    # cleaning old FITS files first :
-#    echo "rm -f re_??.fits im_??.fits"
-#    rm -f re_??.fits im_??.fits
-#    # Generate profile for roofline modeling with Nsight
-#    ncu --set full -c 10 -o cufft_blocks_${N}_${P}_profile \
-#         ${REPO}/build_gpu/cufft_blocks -n $N \
-#                                        -p $P \
-#                                        -F 1 \
-#                                        -f 1
   done
 done
