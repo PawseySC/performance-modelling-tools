@@ -27,15 +27,15 @@
 #
 # ///////////////////////////////////////////////////////////////////////// #
 
-NVALS=(5 10 20 30 40)
-PVALS=(1024 4096)
+NVALS=(5 10 20 30 40 50 100)
+PVALS=(180 256 1024 4096)
 
 IMAGER_BRANCH="${IMAGER_BRANCH:-main}"
 PERFMODELING="${PERFMODELING:-$MYGROUP/performance-modelling-tools}"
 
 cwd=$(pwd)
 timestamp=$(date +"%Y-%m-%d-%H-%M")
-odir="${cwd}/cufftblocks_run_${timestamp}"
+odir="${cwd}/cufftblocks_run_${IMAGER_BRANCH}_${timestamp}"
 REPO="${cwd}/imager_${IMAGER_BRANCH}"
 
 # Get the git sha
@@ -95,8 +95,8 @@ do
 
    gridding_time=$(grep "CLOCK gridding()" cufft_blocks_$N_$P.txt | awk -F " " '{print $5}')
    echo "${timestamp}, $(hostname), ${gitsha}, gridding, $N, $P, $gridding_time" >> clocks_profile.csv
-   cufft_time=$(grep "CLOCK cufftPlanMany()" cufft_blocks_$N_$P.txt | awk -F " " '{print $5}')
-   echo "${timestamp}, $(hostname), ${gitsha}, cufft, $N, $P, $gridding_time" >> clocks_profile.csv 
+   cufft_time=$(grep "CLOCK cufftPlanMany()" cufft_blocks_$N_$P.txt | awk -F " " '{print $4}')
+   echo "${timestamp}, $(hostname), ${gitsha}, cufft, $N, $P, $cufft_time" >> clocks_profile.csv 
 
 
   done

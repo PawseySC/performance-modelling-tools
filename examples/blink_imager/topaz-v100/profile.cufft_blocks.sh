@@ -27,12 +27,8 @@
 #
 # ///////////////////////////////////////////////////////////////////////// #
 
-#NVALS=(1 5 10 50 100)
-#PVALS=(180 1024 8182)
-#NVALS=(20 30 40)
-#PVALS=(1024)
-NVALS=(5 10 20 30 40)
-PVALS=(1024 4096)
+NVALS=(5 10 20 30 40 50 100)
+PVALS=(180 256 1024 4096)
 
 IMAGER_BRANCH="${IMAGER_BRANCH:-main}"
 PERFMODELING="${PERFMODELING:-$MYGROUP/performance-modelling-tools}"
