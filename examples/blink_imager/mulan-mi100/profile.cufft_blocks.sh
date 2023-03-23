@@ -35,7 +35,7 @@ PERFMODELING="${PERFMODELING:-$MYGROUP/performance-modelling-tools}"
 
 cwd=$(pwd)
 timestamp=$(date +"%Y-%m-%d-%H-%M")
-odir="${cwd}/cufftblocks_run_${IMAGER_BRANCH}_${timestamp}"
+odir="${cwd}/cufftblocks_profile_${IMAGER_BRANCH}_${timestamp}"
 REPO="${cwd}/imager_${IMAGER_BRANCH}"
 
 # Get the git sha
@@ -76,15 +76,10 @@ do
     rm -f re_??.fits im_??.fits
 
     # Get a hot spot and trace profile
-    ${REPO}/build_gpu/cufft_blocks -n $N \
-                                        -p $P \
-                                        -F 1 \
-                                        -f 1 > cufft_blocks_${N}_${P}.txt
-
-   gridding_time=$(grep "CLOCK gridding()" cufft_blocks_${N}_${P}.txt | awk -F " " '{print $5}')
-   echo "${timestamp}, $(hostname), ${gitsha}, gridding, $N, $P, $gridding_time" >> clocks_profile.csv
-   cufft_time=$(grep "CLOCK hipfftPlanMany()" cufft_blocks_${N}_${P}.txt | awk -F " " '{print $4}')
-   echo "${timestamp}, $(hostname), ${gitsha}, cufft, $N, $P, $cufft_time" >> clocks_profile.csv 
+    rocprof --stats --sys-trace -o cufft_blocks_${N}_${P}.csv ${REPO}/build_gpu/cufft_blocks -n $N \
+                                                                                        -p $P \
+                                                                                        -F 1 \
+                                                                                        -f 1 
 
 
   done
