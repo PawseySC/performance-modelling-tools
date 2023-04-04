@@ -48,4 +48,7 @@ cd ${REPO}/hip/
 rocprof --stats --sys-trace ./quarkpropGPU.x <<< "test"
 mv results.* ${odir}/
 
-rocprof -i ${cwd}/rocprof_input.txt -o ${odir}/rocprof_metrics.csv ./quarkpropGPU.x <<< "test"
+rocprof -i ${cwd}/rocprof_input.txt -o ${odir}/rocprof_metrics.csv ./quarkpropGPU.x <<'INPUT'
+test
+test
+INPUT
