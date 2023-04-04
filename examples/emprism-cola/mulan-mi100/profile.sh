@@ -28,7 +28,7 @@
 # ///////////////////////////////////////////////////////////////////////// #
 
 
-COLA_BRANCH="${COLA_BRANCH:-main}"
+COLA_BRANCH="${COLA_BRANCH:-master}"
 PERFMODELING="${PERFMODELING:-$MYGROUP/performance-modelling-tools}"
 
 cwd=$(pwd)
@@ -42,7 +42,10 @@ REPO="${cwd}/cola-sprint_${COLA_BRANCH}"
 module load rocm/4.5.0
 
 
-cd ${REPO}/hip/
-rocprof --stats --sys-trace ./quarkpropGPU.x
 mkdir ${odir}
+cd ${REPO}/hip/
+
+rocprof --stats --sys-trace ./quarkpropGPU.x <<< "test"
 mv results.* ${odir}/
+
+rocprof -i ${cwd}/rocprof_input.txt -o ${odir}/rocprof_metrics.csv ./quarkpropGPU.x <<< "test"

@@ -1,0 +1,4 @@
+pmc: FETCH_SIZE
+pmc: WRITE_SIZE
+pmc: L2CacheHit
+kernel: EOCloverDagFBCGPU

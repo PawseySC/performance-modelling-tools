@@ -28,7 +28,7 @@
 # ///////////////////////////////////////////////////////////////////////// #
 
 
-COLA_BRANCH="${COLA_BRANCH:-main}"
+COLA_BRANCH="${COLA_BRANCH:-master}"
 PERFMODELING="${PERFMODELING:-$MYGROUP/performance-modelling-tools}"
 
 cwd=$(pwd)
@@ -45,4 +45,5 @@ module load rocm/4.5.0
 
 # Build the code for gpu acceleration
 mkdir lib
+cd ${cwd}/cola-sprint_${COLA_BRANCH}/include && ln -s craype.mk current.mk && cd ${cwd}/cola-sprint_${COLA_BRANCH}
 make
