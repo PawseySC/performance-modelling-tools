@@ -1,3 +1,8 @@
 pmc: FETCH_SIZE, WRITE_SIZE
 pmc: L2CacheHit
-kernel: EOCloverDagFBCGPU
+pmc: MemUnitBusy
+pmc: MemUnitStalled
+pmc: WriteUnitStalled
+pmc: Wavefronts
+pmc: ALUStalledByLDS
+kernel: EOCloverFBCGPU

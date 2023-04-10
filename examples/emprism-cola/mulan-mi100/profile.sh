@@ -45,10 +45,21 @@ module load rocm/4.5.0
 mkdir ${odir}
 cd ${REPO}/hip/
 
+
+# Do a straight run first
+./quarkpropGPU.x <<< "test"
+
+# Profile for hot-spot and trace
 rocprof --stats --sys-trace ./quarkpropGPU.x <<< "test"
 mv results.* ${odir}/
 
+# Profile for events
 rocprof -i ${cwd}/rocprof_input.txt -o ${odir}/rocprof_metrics.csv ./quarkpropGPU.x <<'INPUT'
+test
+test
+test
+test
+test
 test
 test
 INPUT
