@@ -15,8 +15,6 @@
 #SBATCH --threads-per-core=1
 #SBATCH --partition=gpuq-dev
 #SBATCH --gres=gpu:1 
-#SBATCH -o stdout
-#SBATCH -e stderr
 ###SBATCH --project=pawsey0007
 #
 # ///////////////////////////////////////////////////////////////////////// #
@@ -35,13 +33,12 @@ cd ${CODENAME}_${GIT_BRANCH}
 git checkout ${GIT_BRANCH}
 
 # Load modules
-module load gcc/8.3.0 cuda/11.1 r/4.0.2 nvhpc
+module load cuda/11.4.2 r/4.0.2 openmpi-ucx-gpu/4.0.2
 
 # Install R dependencies
 tools/install.sh rdep 
 
 # Build commands
 make configure
-./configure --with-mpi-include="${OPAL_PREFIX}/include" \
-            --with-mpi-lib="${OPAL_PREFIX}/lib"
-make d2q9
+./configure
+make -j 8 d2q9
