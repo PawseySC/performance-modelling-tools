@@ -16,7 +16,7 @@
 #SBATCH --partition=gpuq-dev
 #SBATCH --gres=gpu:1 
 #SBATCH -o install.out
-#SBATCH -e install.err
+#SBATCH -e install.out
 ###SBATCH --project=pawsey0007
 #
 # ///////////////////////////////////////////////////////////////////////// #
@@ -26,22 +26,11 @@ CODENAME="TCLB"
 REPO="https://github.com/CFD-GO/TCLB.git"
 GIT_BRANCH="${GIT_BRANCH:-master}"
 
-cwd=$(pwd)
-if [ ! -e ${CODENAME}_${GIT_BRANCH} ] ; then
- git clone ${REPO} ${CODENAME}_${GIT_BRANCH}
-fi
-
-cd ${CODENAME}_${GIT_BRANCH}
-git checkout ${GIT_BRANCH}
+git clone https://github.com/llaniewski/frac_scale_test.git
+cd frac_scale_test
 
 # Load modules
 module load cuda/11.4.2 r/4.0.2 openmpi-ucx-gpu/4.0.2
 
-# Install R dependencies
-tools/install.sh rdep 
 
-# Build commands
-make configure
-./configure
-make -j d2q9
-make -j d3q27_PSM_NEBB
+./install.sh master CFD-GO master LAMMPS=/group/director2188/sprint/LIGGGHTS-PUBLIC/
