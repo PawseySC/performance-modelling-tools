@@ -25,9 +25,17 @@ module load rocm/5.0.2
 module load r
 
 # Profile for hot-spot and trace
+# The profiler output is moved to ${odir}
+# Notable output from rocprof includes
+#     > results.json - Trace profile. Can be visualized at https://ui.perfetto.dev
+#     > results.stats.csv - Hotspot profile of HIP kernels
+#     > results.copy_stats.csv - Hotspot profile summar of memcpy calls
 rocprof --stats --sys-trace ${CODENAME}_${GIT_BRANCH}/CLB/d3q27_PSM_NEBB/main test3d.xml
 mv results.* ${odir}/
 
+
 # Profile for events
+# Here we pass in rocprof_input.txt to indicate what metrics we want to collect and for what kernels
+# The output is in ${odir}/rocprof_metrics.csv
 rocprof -i ${cwd}/rocprof_input.txt -o ${odir}/rocprof_metrics.csv ${CODENAME}_${GIT_BRANCH}/CLB/d3q27_PSM_NEBB/main test3d.xml
 

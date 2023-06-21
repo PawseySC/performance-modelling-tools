@@ -5,3 +5,5 @@ spack.lock
 *.so
 *.exe
 imager_*
+*.out
+*.err
