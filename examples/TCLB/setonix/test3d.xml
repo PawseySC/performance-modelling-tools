@@ -1,0 +1,13 @@
+
+<?xml version="1.0"?>
+<CLBConfig version="2.0" output="output/">
+	<Geometry nx="32" ny="32" nz="32">
+		<BGK><Box/></BGK>
+	</Geometry>
+	<Model>
+		<Param name="nu" value="0.1666"/>
+		<Param name="AccelY" value="0.00001"/> 
+	</Model>
+	<VTK Iterations="10" what="U,BOUNDARY,Solid"/>
+	<Solve Iterations="10"/> 
+</CLBConfig>

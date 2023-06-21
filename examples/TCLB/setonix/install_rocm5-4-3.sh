@@ -26,15 +26,15 @@ REPO="https://github.com/CFD-GO/TCLB.git"
 GIT_BRANCH="${GIT_BRANCH:-master}"
 
 cwd=$(pwd)
-if [ ! -e ${CODENAME}_${GIT_BRANCH} ] ; then
- git clone ${REPO} ${CODENAME}_${GIT_BRANCH}
+if [ ! -e ${CODENAME}_${GIT_BRANCH}-rocm-5-4-3 ] ; then
+ git clone ${REPO} ${CODENAME}_${GIT_BRANCH}_rocm-5-4-3
 fi
 
-cd ${CODENAME}_${GIT_BRANCH}
+cd ${CODENAME}_${GIT_BRANCH}_rocm-5-4-3
 git checkout ${GIT_BRANCH}
 
 # Load modules
-module load rocm/5.0.2
+module load rocm/5.4.3
 module load r/4.1.0
 
 # Install R dependencies
@@ -45,5 +45,6 @@ make configure
 ./configure --enable-hip \
 	    --with-mpi-include=${CRAY_MPICH_DIR}/include \
 	    --with-mpi-lib=${CRAY_MPICH_DIR}/lib
+
 make -j d2q9
 make -j d3q27_PSM_NEBB
