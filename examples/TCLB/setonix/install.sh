@@ -22,19 +22,25 @@
 
 
 CODENAME="TCLB"
-REPO="https://github.com/CFD-GO/TCLB.git"
-GIT_BRANCH="${GIT_BRANCH:-master}"
+REPO="https://github.com/FluidNumerics/TCLB.git"
+#GIT_BRANCH="master"
+GIT_BRANCH="launch_bounds_64_6"
+ROCM_VERSION="5.0.2"
+APP=d3q27_PSM_NEBB
+
+
+CHECKOUT_DIR=${CODENAME}_${GIT_BRANCH}_rocm-${ROCM_VERSION}
 
 cwd=$(pwd)
 if [ ! -e ${CODENAME}_${GIT_BRANCH} ] ; then
- git clone ${REPO} ${CODENAME}_${GIT_BRANCH}
+ git clone ${REPO} ${CHECKOUT_DIR}
 fi
 
-cd ${CODENAME}_${GIT_BRANCH}
+cd ${CHECKOUT_DIR}
 git checkout ${GIT_BRANCH}
 
 # Load modules
-module load rocm/5.0.2
+module load rocm/$ROCM_VERSION
 module load r/4.1.0
 
 # Install R dependencies
@@ -43,7 +49,7 @@ tools/install.sh rdep
 # Build commands
 make configure
 ./configure --enable-hip \
+	    --with-cpp-flags="-Rpass-analysis=kernel-resource-usage" \
 	    --with-mpi-include=${CRAY_MPICH_DIR}/include \
 	    --with-mpi-lib=${CRAY_MPICH_DIR}/lib
-make -j d2q9
-make -j d3q27_PSM_NEBB
+make -j ${APP} 
