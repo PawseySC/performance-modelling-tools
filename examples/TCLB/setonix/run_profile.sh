@@ -1,5 +1,4 @@
 #!/bin/bash
-#!/bin/bash
 #SBATCH --partition=gpu-dev
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
