@@ -22,26 +22,21 @@
 # ///////////////////////////////////////////////////////////////////////// #
 
 
-CODENAME="TCLB"
-REPO="https://github.com/CFD-GO/TCLB.git"
+CODENAME="frac_scale_test"
+REPO="https://github.com/llaniewski/frac_scale_test.git"
 GIT_BRANCH="${GIT_BRANCH:-master}"
 
-cwd=$(pwd)
-if [ ! -e ${CODENAME}_${GIT_BRANCH} ] ; then
- git clone ${REPO} ${CODENAME}_${GIT_BRANCH}
-fi
+#cwd=$(pwd)
+#if [ ! -e ${CODENAME}_${GIT_BRANCH} ] ; then
+# git clone ${REPO} ${CODENAME}_${GIT_BRANCH}
+#fi
+#
+#module load cuda/11.4.2 r/4.0.2 openmpi-ucx-gpu/4.0.2
+#
+#cd ${CODENAME}_${GIT_BRANCH}
+#git checkout ${GIT_BRANCH}
+#
+#./gen.sh
 
-cd ${CODENAME}_${GIT_BRANCH}
-git checkout ${GIT_BRANCH}
+ln -s /group/director2188/sprint/frac_scale_test/data/ ./
 
-# Load modules
-module load cuda/11.4.2 r/4.0.2 openmpi-ucx-gpu/4.0.2
-
-# Install R dependencies
-tools/install.sh rdep 
-
-# Build commands
-make configure
-./configure
-make -j d2q9
-make -j d3q27_PSM_NEBB
