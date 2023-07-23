@@ -27,7 +27,8 @@ GIT_BRANCH="pacer_cleanup"
 ROCM_VERSION="5.0.2"
 MACH="STXgpu"
 
-CHECKOUT_DIR=${CODENAME}_${GIT_BRANCH}_rocm-${ROCM_VERSION}
+
+CHECKOUT_DIR=${CODENAME}_${GIT_BRANCH}_${MACH}_rocm-${ROCM_VERSION}
 
 cwd=$(pwd)
 if [ ! -e ${CODENAME}_${GIT_BRANCH} ] ; then
@@ -38,7 +39,7 @@ cd ${cwd}/${CHECKOUT_DIR}
 git checkout ${GIT_BRANCH}
 
 # Load modules
-module load PrgEnv-cray/8.3.3
+module load PrgEnv-cray/8.3.3 craype-accel-amd-gfx90a
 module load rocm/$ROCM_VERSION
 
 cd ${cwd}/${CHECKOUT_DIR}/build
