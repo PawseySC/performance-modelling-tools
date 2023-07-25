@@ -5,18 +5,18 @@ MODE
 ==========================================================================================
 GRID DIMENSION PARAMETERS
 ==========================================================================================
-96                 - global number of grid points in the x-direction    (nx_g)
-96                 - global number of grid points in the y-direction    (ny_g)
-96                 - global number of grid points in the z-direction    (nz_g)
-2                 - number of processors in x-direction                (npx)
-2                  - number of processors in y-direction                (npy)
-2                   - number of processors in z-direction                (npz)
+64                 - global number of grid points in the x-direction    (nx_g)
+64                 - global number of grid points in the y-direction    (ny_g)
+64                 - global number of grid points in the z-direction    (nz_g)
+1                  - number of processors in x-direction                (npx)
+1                  - number of processors in y-direction                (npy)
+1                   - number of processors in z-direction                (npz)
 ==========================================================================================
 RUN-TIME PARAMETERS
 ==========================================================================================
 0                   - 0 for write output to screen, 1 for write to file  (i_write)
 0                   - 0 for new run, 1 for restart                       (i_restart)
-10             - ending time step                                   (i_time_end)
+2             - ending time step                                   (i_time_end)
 10000                - frequency to save fields in restart files          (i_time_save)
 1.0e+5              - time period to save fields in restart files        (time_save_inc)
 ==========================================================================================
