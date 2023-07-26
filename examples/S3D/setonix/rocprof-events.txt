@@ -1,0 +1,3 @@
+# Perf counters group 1
+pmc : FETCH_SIZE, WRITE_SIZE
+pmc : L2CacheHit
