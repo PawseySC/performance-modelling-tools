@@ -146,7 +146,7 @@ def main():
   if args.csv :
       ofile = args.mblog+'.csv'
       with open(ofile,'w') as f:
-          f.write('"Data Type", "Arithmetic Intensity (FLOPs/Byte)", "Bandwidth (GB/s)", "GFLOPS", "Execution Time (s)"\n')
+          f.write('"Data Type","Arithmetic Intensity (FLOPs/Byte)","Bandwidth (GB/s)","GFLOPS","Execution Time (s)"\n')
           for k in range(len(dataset['singlePrecision']['arithmeticIntensity'])):
               f.write(f"float32, {dataset['singlePrecision']['arithmeticIntensity'][k]}, {dataset['singlePrecision']['bandwidth'][k]}, {dataset['singlePrecision']['GFLOPS'][k]}, {dataset['singlePrecision']['executionTime'][k]}\n")
 

@@ -1,0 +1,382 @@
+#!/usr/bin/env python
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+import socket
+
+
+plt.style.use('dark_background')
+
+# ======= mixbench ======= #
+
+def parseClockRateGHz(line):
+  clockRateTxt = line.split(':')[-1].strip().split(' ')
+  clockRate = clockRateTxt[0]
+  clockUnits = clockRateTxt[1]
+  if clockUnits == 'MHz' :
+    return {'clockRateGHz':float(clockRate)/1000.0}
+  elif clockUnits == 'GHz' :
+    return {'clockRateGHz':float(clockRate)}
+  else:
+    print(f"Warning - units {clockUnits} not configured for reporting")
+    return {'clockRateGHz':float(clockRate)}
+
+
+def parseWarpSize(line):
+  txt = line.split(':')[-1].strip()
+  return {'warpSize':int(txt)}
+
+def parseSPs(line):
+  txt = line.split(':')[-1].strip().split(' ')
+  return {'totalSPs':int(txt[0])}
+
+def parseCSVData(csvLines):
+
+  data = {'singlePrecision':{'arithmeticIntensity':[],
+                             'executionTime':[],
+                             'GFLOPS':[],
+                             'bandwidth':[]},
+          'doublePrecision':{'arithmeticIntensity':[],
+                             'executionTime':[],
+                             'GFLOPS':[],
+                             'bandwidth':[]},
+          'integer':{'arithmeticIntensity':[],
+                     'executionTime':[],
+                     'GIOPS':[],
+                     'bandwidth':[]}}
+
+  for line in csvLines:
+      sline = line.split(',')
+      if len(sline) > 1:
+        data['singlePrecision']['arithmeticIntensity'].append(float(sline[1]))
+        data['singlePrecision']['executionTime'].append(float(sline[2]))
+        data['singlePrecision']['GFLOPS'].append(float(sline[3]))
+        data['singlePrecision']['bandwidth'].append(float(sline[4]))
+  
+        data['doublePrecision']['arithmeticIntensity'].append(float(sline[5]))
+        data['doublePrecision']['executionTime'].append(float(sline[6]))
+        data['doublePrecision']['GFLOPS'].append(float(sline[7]))
+        data['doublePrecision']['bandwidth'].append(float(sline[8]))
+  
+        data['integer']['arithmeticIntensity'].append(float(sline[9]))
+        data['integer']['executionTime'].append(float(sline[10]))
+        data['integer']['GIOPS'].append(float(sline[11]))
+        data['integer']['bandwidth'].append(float(sline[12]))
+
+  data['singlePrecision']['maxBandwidth']=max(data['singlePrecision']['bandwidth'])
+  data['doublePrecision']['maxBandwidth']=max(data['doublePrecision']['bandwidth'])
+  data['integer']['maxBandwidth']=max(data['integer']['bandwidth'])
+
+  return data
+
+
+def parse_mixbench(mixbench_logs,workdir):
+
+  if os.path.isfile(mixbench_logs):
+    with open(f"{mixbench_logs}",'r') as f:
+      log = f.read().split('\n')
+  else:
+      print(f"Error : {mixbench_logs} file not found")
+      sys.exit(1)
+
+  dataset = {}
+
+  k = 0
+  for line in log:
+
+      if 'GPU clock rate' in line:
+        dataset.update(parseClockRateGHz(line))
+
+      elif 'WarpSize' in line:
+        dataset.update(parseWarpSize(line))
+
+      elif 'Total SPs' in line:
+        dataset.update(parseSPs(line))
+
+      elif 'CSV' in line:
+        dataset.update(parseCSVData(log[k+3:-1]))
+        break
+      k+=1
+
+  # Post process calculations
+  dataset.update({'computeUnits':dataset['totalSPs']/dataset['warpSize']})
+  dataset.update({'gipsPeak':dataset['computeUnits']*dataset['clockRateGHz']})
+
+  with open(f"{workdir}/mixbench.csv",'w') as f:
+      f.write('"Data Type","Arithmetic Intensity (FLOPs/Byte)","Bandwidth (GB/s)","GFLOPS","Execution Time (s)"\n')
+      for k in range(len(dataset['singlePrecision']['arithmeticIntensity'])):
+          f.write(f"float32, {dataset['singlePrecision']['arithmeticIntensity'][k]}, {dataset['singlePrecision']['bandwidth'][k]}, {dataset['singlePrecision']['GFLOPS'][k]}, {dataset['singlePrecision']['executionTime'][k]}\n")
+
+      for k in range(len(dataset['doublePrecision']['arithmeticIntensity'])):
+          f.write(f"float64, {dataset['doublePrecision']['arithmeticIntensity'][k]}, {dataset['doublePrecision']['bandwidth'][k]}, {dataset['doublePrecision']['GFLOPS'][k]}, {dataset['doublePrecision']['executionTime'][k]}\n")
+
+
+# ====== End mixbench ======= #
+
+def git_sha():
+    import git
+    repo = git.Repo(search_parent_directories=True)
+    return repo.head.object.hexsha
+
+def git_branch():
+    import git
+    repo = git.Repo(search_parent_directories=True)
+    return repo.active_branch
+
+def gen_metrics(workdir):
+    """Generates the input metrics.txt file to send to rocprof
+    for hardware events profile"""
+    metrics="""pmc: FETCH_SIZE, WRITE_SIZE
+pmc: L2CacheHit
+# FP16
+pmc: SQ_INSTS_VALU_ADD_F16,SQ_INSTS_VALU_MUL_F16
+pmc: SQ_INSTS_VALU_TRANS_F16,SQ_INSTS_VALU_FMA_F16
+# FP32
+pmc: SQ_INSTS_VALU_ADD_F32,SQ_INSTS_VALU_MUL_F32
+pmc: SQ_INSTS_VALU_TRANS_F32,SQ_INSTS_VALU_FMA_F32
+# FP64
+pmc: SQ_INSTS_VALU_ADD_F64,SQ_INSTS_VALU_MUL_F64
+pmc: SQ_INSTS_VALU_TRANS_F64,SQ_INSTS_VALU_FMA_F64
+"""
+
+    with open(f"{workdir}/metrics.txt","w") as f:
+       f.write(metrics)
+
+
+def append(output,results,metrics):
+    import sys
+
+    if os.path.isfile(results):
+        res_df = pd.read_csv(results)
+    else:
+        print(f"Error : {results} file not found")
+        sys.exit(1)
+
+    if os.path.isfile(metrics):
+        df = pd.read_csv(metrics)
+    else:
+        print(f"Error : {metrics} file not found")
+        sys.exit(1)
+
+    # Add computed columns
+    df['Commit ID'] = pd.Series([git_sha() for x in range(len(df.index))])
+    df['Git branch'] = pd.Series([git_branch() for x in range(len(df.index))])
+    df['Hostname'] = pd.Series([socket.gethostname() for x in range(len(df.index))])
+
+    df['TOTAL_RW_GB'] = (df['FETCH_SIZE'] + df['WRITE_SIZE'])*1e-3
+    df['Duration (ms)'] = res_df['DurationNs']/1.0e6
+    df['Bandwidth (GB/s)'] = (df['FETCH_SIZE'] + df['WRITE_SIZE'])/(df['Duration (ms)'])
+    df['FP64_FLOPS'] = 64*(df['SQ_INSTS_VALU_ADD_F64'] +
+                             df['SQ_INSTS_VALU_MUL_F64'] +
+                             df['SQ_INSTS_VALU_TRANS_F64']+
+                             2*df['SQ_INSTS_VALU_FMA_F64'])
+    df['FP32_FLOPS'] = 64*(df['SQ_INSTS_VALU_ADD_F32'] +
+                             df['SQ_INSTS_VALU_MUL_F32'] +
+                             df['SQ_INSTS_VALU_TRANS_F32']+
+                             2*df['SQ_INSTS_VALU_FMA_F32'])
+    df['TOTAL_GFLOPS'] = (df['FP64_FLOPS'] + df['FP32_FLOPS'])/df['Duration (ms)']/1.0e6
+    df['AI'] = (df['FP64_FLOPS'] + df['FP32_FLOPS'])/(df['FETCH_SIZE'] + df['WRITE_SIZE'])/1.0e6 # FLOPS/BYTE df['TOTAL_GFLOPS']/df['TOTAL_RW_GB']
+
+    if os.path.isfile(output):
+        print(f"Found {output}. Appending merged table to CSV")
+        df.to_csv(output, mode='a', index=False, header=False)
+    else:
+        print(f"{output} not found. Creating new output CSV.")
+        df.to_csv(output, mode='w', index=False, header=True)
+
+
+def plot_bandwidth(df, kernel, branch):
+    
+    if branch:
+        branches = [branch]
+    else:
+        branches = df['Git branch'].unique()
+
+    if kernel:
+       kernels = df[df['KernelName'].str.contains(kernel)]['KernelName'].unique()
+    else:
+       kernels=df['KernelName'].unique()
+    
+    plt.figure(figsize=(8.4,4.8))
+    for c in branches:
+        for k in kernels:
+           
+           df_k = df.groupby('KernelName').get_group(k)
+           d = df_k[df_k['Git branch'].str.contains(c)]
+          
+           plt.plot( d['TOTAL_RW_GB'], d['Bandwidth (GB/s)'], 'o', label=f'{k[0:30]} @{c}')
+            
+
+    plt.xlabel( 'Read + Write (GB)')
+    plt.ylabel( 'Bandwidth (GB/s)')
+    plt.legend(bbox_to_anchor=(1.05, 1.0),loc='upper left')
+    plt.tight_layout()
+    plt.title(f'[{kernel}] Bandwidth v. RW Size')
+    plt.savefig(f'{kernel}_bandwidth_v_rwsize.png',bbox_inches='tight', dpi=300)
+    plt.close()
+
+def plot_flops(df, kernel, branch,):
+    
+    if branch:
+        branches = [branch]
+    else:
+        branches = df['Git branch'].unique()
+
+    if kernel:
+       kernels = df[df['KernelName'].str.contains(kernel)]['KernelName'].unique()
+    else:
+       kernels=df['KernelName'].unique()
+
+    plt.figure(figsize=(8.4,4.8))
+    for c in branches:
+        for k in kernels:
+           df_k = df.groupby('KernelName').get_group(k)
+           d = df_k[df_k['Git branch'].str.contains(c)]
+     
+           plt.plot( d['FETCH_SIZE']+ d['WRITE_SIZE'], d['TOTAL_GFLOPS'], 'o', label=f'{k[0:30]} @{c}')
+
+
+    plt.grid(color='gray', linewidth=0.5)
+    plt.xlabel( 'Read + Write (MB)')
+    plt.ylabel( 'GFLOPS/s')
+    plt.legend(bbox_to_anchor=(1.05, 1.0),loc='upper left')
+    plt.tight_layout()
+    plt.title(f'[{kernel}] Compute Perf. v. RW Size')
+    plt.savefig(f'{kernel}_flops_v_rwsize.png',bbox_inches='tight', dpi=300)
+    plt.close()
+
+def plot_roofline(df, df_mixbench, kernel, branch):
+
+    if branch:
+        branches = [branch]
+    else:
+        branches = df['Git branch'].unique()
+
+    if kernel:
+       kernels = df[df['KernelName'].str.contains(kernel)]['KernelName'].unique()
+    else:
+       kernels=df['KernelName'].unique()
+
+    plt.figure(figsize=(8.4,4.8))
+    pf = df_mixbench[df_mixbench['Data Type'].str.contains('float32')]
+    plt.plot(pf['Arithmetic Intensity (FLOPs/Byte)'], pf['GFLOPS'], '--', color='red', linewidth=1, label='mixbench fp32')
+
+    pf = df_mixbench[df_mixbench['Data Type'].str.contains('float64')]
+    plt.plot(pf['Arithmetic Intensity (FLOPs/Byte)'], pf['GFLOPS'], '--', color='green', linewidth=1, label='mixbench fp64')
+
+    for c in branches:
+        for k in kernels:
+           df_k = df.groupby('KernelName').get_group(k)
+           d = df_k[df_k['Git branch'].str.contains(c)]
+
+           kl = k.replace("void","").replace("_","").lstrip()[0:14]
+           plt.plot( d['AI'], d['TOTAL_GFLOPS'], 'o', label=f'{kl} @{c}')
+
+  
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.grid(color='gray', linewidth=0.5)
+    plt.xlabel( 'Arithmetic Intensity (FLOPS/byte)')
+    plt.ylabel( 'GFLOPS/s')
+    plt.legend(bbox_to_anchor=(1.05, 1.0),loc='upper left')
+    plt.tight_layout()
+    plt.title(f'[{kernel}] Roofline')
+    plt.savefig(f'{kernel}_roofline.png',bbox_inches='tight', dpi=300)
+    plt.close()
+
+def plot_l2cachehit(df, kernel, branch):
+    
+    if branch:
+        branches = [branch]
+    else:
+        branches = df['Git branch'].unique()
+
+    if kernel:
+       kernels = df[df['KernelName'].str.contains(kernel)]['KernelName'].unique()
+    else:
+       kernels=df['KernelName'].unique()
+
+    plt.figure(figsize=(8.4,4.8))
+    for c in branches:
+        for k in kernels:
+           df_k = df.groupby('KernelName').get_group(k)
+           d = df_k[df_k['Git branch'].str.contains(c)]
+     
+           plt.plot( d['FETCH_SIZE']+ d['WRITE_SIZE'], d['L2CacheHit'], 'o', label=f'{k[0:30]} @{c}')
+            
+    
+    plt.xlabel( 'Read + Write (MB)')
+    plt.ylabel( 'L2 Cache Hit (%)')
+    plt.legend(bbox_to_anchor=(1.05, 1.0),loc='upper left')
+    plt.tight_layout()
+    plt.title(f'[{kernel}] L2 Cache Hit v. RW Size')
+    plt.savefig(f'{kernel}_l2cachehit_v_rwsize.png',bbox_inches='tight', dpi=300)
+    plt.close()
+
+def plot_runtime(input, kernel, branch):
+    
+    if branch:
+        branches = [branch]
+    else:
+        branches = df['Git branch'].unique()
+
+    if kernel:
+       kernels = df[df['KernelName'].str.contains(kernel)]['KernelName'].unique()
+    else:
+       kernels=df['KernelName'].unique()
+
+    plt.figure(figsize=(8.4,4.8))
+    for c in branches:
+        for k in kernels:
+           df_k = df.groupby('KernelName').get_group(k)
+           d = df_k[df_k['Git branch'].str.contains(c)]
+     
+           plt.plot( d['FETCH_SIZE']+ d['WRITE_SIZE'], d['Duration (ms)'], 'o', label=f'{k[0:30]} @{c}')
+            
+
+    plt.xlabel( 'Read + Write (MB)')
+    plt.ylabel( 'Duration (ms)')
+    plt.legend(bbox_to_anchor=(1.05, 1.0),loc='upper left')
+    plt.tight_layout()
+    plt.title(f'[{kernel}] Duration v. RW Size')
+    plt.savefig(f'{kernel}_duration_v_rwsize.png',bbox_inches='tight', dpi=300)
+    plt.close()
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description='Append to a csv')
+    parser.add_argument('-o', '--output', type=str, default="output.csv", help='Path the csv file that you want to write/append to')
+    parser.add_argument('-w', '--workdir', type=str, default="/tmp", help='Directory for temporary storage of intermediate profiles')
+    parser.add_argument('-r', '--results', type=str, help='Flat profile obtained from running rocprof on an application.' )
+    parser.add_argument('-m', '--metrics', type=str, help='Hardware events profile obtained from running rocprof on an application with a metrics file.' )
+    parser.add_argument('-x', '--mixbench', type=str, help='Path to mixbench log file. If provided, a roofline diagram will be created')
+    parser.add_argument('-b', '--branch', type=str, help='Filter results to only show this branch')
+    parser.add_argument('-k', '--kernel', type=str, help='Kernel keyword for making plot. Only kernels containing this string will be plotted')
+    parser.add_argument('--plot', action='store_true', help='Enable plots')
+    
+    args = parser.parse_args()
+
+    #print(f"Profiling application : {args.app}")
+    print(f"Work directory set to : {args.workdir}")
+    print(f"Output profile data   : {args.output}")
+
+    if args.results :
+      append(args.output, args.results, args.metrics)
+    
+    # Load the whole csv database of profiles
+    if args.plot:
+      df = pd.read_csv(args.output)
+      plot_bandwidth(df,args.kernel,args.branch)
+      plot_flops(df,args.kernel,args.branch)
+      plot_l2cachehit(df,args.kernel,args.branch)
+      plot_runtime(df,args.kernel,args.branch)
+
+      if args.mixbench:
+        print(f"Parsing mixbench logs for empirical roofline data : {args.mixbench}")
+        parse_mixbench(args.mixbench, args.workdir)
+        df_mixbench = pd.read_csv(f"{args.workdir}/mixbench.csv")
+        plot_roofline(df,df_mixbench,args.kernel,args.branch)
+
+
