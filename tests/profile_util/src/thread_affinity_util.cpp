@@ -5,6 +5,11 @@
 #include "profile_util.h"
 
 namespace profiling_util {
+    
+    #ifdef _MPI
+    MPI_Comm __comm;
+    int __comm_rank;
+    #endif 
 
     /*
     Code to facilitate core binding reporting
@@ -76,7 +81,6 @@ namespace profiling_util {
     {
         std::string s;
         s = "Parallel API's \n ======== \n";
-        int numdevices = 0;
 #ifdef _MPI
         int rank, size;
         MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -88,49 +92,37 @@ namespace profiling_util {
         s += "OpenMP version " + std::to_string(_OPENMP);
         s += " with total number of threads = " + std::to_string(omp_get_max_threads());
         s += " with total number of allowed levels " + std::to_string(omp_get_max_active_levels());
-        numdevices = omp_get_num_devices();
+#ifdef _WITH_GPU
+        int numdevices = omp_get_num_devices();
         int defaultdevice = omp_get_default_device();
-        s += " OpenMP Target : ";
-        s += "Number of devices " + std::to_string(numdevices);
+        int ninfo[2];
+        if (numdevices > 0) 
+        {
+            #pragma omp target map(tofrom:ninfo)
+            {
+                int team = omp_get_team_num();
+                int tid = omp_get_thread_num();
+                if (tid == 0 && team == 0)
+                {
+                    auto nteams = omp_get_num_teams();
+                    auto nthreads = omp_get_num_threads();
+                    ninfo[0] = nteams;
+                    ninfo[1] = nthreads;
+                }
+            }
+            s += "\n";
+            s += "OpenMP Target : ";
+            s += "Number of devices "+ std::to_string(numdevices);
+            s += "Default device "+ std::to_string(defaultdevice);
+            s += "Number of Compute Units "+ std::to_string(ninfo[1]);
+        }
+#endif
         s += "\n";
 #endif
-#ifdef _OPENACC
-        s += "OpenACC version " + std::to_string(_OPENACC);
-        auto dtype = acc_get_device_type();
-        numdevices = acc_get_num_devices(dtype);
-        s += ": ";
-        s += "Number of devices " + std::to_string(numdevices);
-        s += "\n";
-#endif
-#ifdef USEHIP 
-        hipGetDeviceCount(&numdevices);
-        s += "Running with HIP and found " + std::to_string(numdevices) + "\n";
-        for (auto i=0;i<numdevices;i++)
-        {
-            hipDeviceProp_t prop;
-            hipGetDeviceProperties(&prop, i);
-            s += "HIP Device" + std::string(prop.name);
-            s += " Compute Units " + std::to_string(prop.multiProcessorCount);
-            s += " Max Work Group Size " + std::to_string(prop.warpSize);
-            s += " Local Mem Size " + std::to_string(prop.sharedMemPerBlock);
-            s += " Global Mem Size " + std::to_string(prop.totalGlobalMem);
-            s += "\n";
-        }
-#endif 
-#ifdef USECUDA
-        cudaGetDeviceCount(&numdevices);
-        s += "Running with CUDA and found " + std::to_string(numdevices) + "\n";
-        for (auto i=0;i<numdevices;i++)
-        {
-            cudaDeviceProp prop;
-            cudaGetDeviceProperties(&prop, i);
-            s += "Device" + std::string(prop.name);
-            s += " Compute Units " + std::to_string(prop.multiProcessorCount);
-            s += " Max Work Group Size " + std::to_string(prop.warpSize);
-            s += " Local Mem Size " + std::to_string(prop.sharedMemPerBlock);
-            s += " Global Mem Size " + std::to_string(prop.totalGlobalMem);
-            s += "\n";
-        }
+#ifdef _GPU 
+        int nDevices = 0;
+        pu_gpuErrorCheck(pu_gpuGetDeviceCount(&nDevices));
+        s += "Using GPUs: Running with " +std::string(_GPU_API) + " and found " + std::to_string(nDevices) + " devices\n";
 #endif 
         return s;
     }
@@ -177,6 +169,38 @@ namespace profiling_util {
                 binding_report += result;
             }
         }
+#ifdef _GPU
+        int nDevices = 0;
+        pu_gpuErrorCheck(pu_gpuGetDeviceCount(&nDevices));
+        if (nDevices > 0) {
+            // binding_report += std::string(_GPU_API) + " API ";
+            // binding_report += std::to_string(nDevices) + " devices, device info : \n";
+            char busid[64];
+            for (auto i=0;i<nDevices;i++)
+            {
+                pu_gpuDeviceProp_t prop;
+                std::string s;
+                // pu_gpuErrorCheck(pu_gpuSetDevice(i));
+                pu_gpuErrorCheck(pu_gpuGetDeviceProperties(&prop, i));
+                // Get the PCIBusId for each GPU and use it to query for UUID
+                pu_gpuErrorCheck(pu_gpuDeviceGetPCIBusId(busid, 64, i));
+                s = "\t On node " + std::string(hnbuf) + " : ";
+#ifdef _MPI
+                s += "MPI Rank " + std::to_string(ThisTask) + " : ";
+#endif
+                s += "GPU device " + std::to_string(i);
+                s += " Device_Name=" + std::string(prop.name);
+                s += " Bus_ID=" + std::string(busid);
+                s += " Compute_Units=" + std::to_string(prop.multiProcessorCount);
+                s += " Max_Work_Group_Size=" + std::to_string(prop.warpSize);
+                s += " Local_Mem_Size=" + std::to_string(prop.sharedMemPerBlock);
+                s += " Global_Mem_Size=" + std::to_string(prop.totalGlobalMem);
+                s += "\n";
+                binding_report +=s;
+            }
+            // pu_gpuErrorCheck(pu_gpuSetDevice(0));
+        }
+#endif
 #ifdef _MPI
         // gather all strings to for outputing info 
         std::vector<int> recvcounts(NProcs);

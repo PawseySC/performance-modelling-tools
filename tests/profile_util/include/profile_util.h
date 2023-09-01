@@ -16,6 +16,8 @@
 #include <fstream>
 #include <iomanip>
 #include <memory>
+#include <array>
+#include <algorithm>
 
 #include <sched.h>
 #include <stdlib.h>
@@ -26,11 +28,17 @@
 #include <mpi.h>
 #endif 
 
-#ifdef USEHIP
+#ifdef _HIP
+#define _GPU 
+#define _GPU_API "HIP"
+#define _GPU_TO_SECONDS 1.0/1000.0
 #include <hip/hip_runtime.h>
 #endif
 
-#ifdef USECUDA
+#ifdef _CUDA
+#define _GPU
+#define _GPU_API "CUDA"
+#define _GPU_TO_SECONDS 1.0/1000.0
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #endif
@@ -38,16 +46,11 @@
 #ifdef _OPENMP 
 #include <omp.h>
 #endif
-
-#ifdef _OPENACC
-#include <openacc.h>
-#endif
-
-
 /// \defgroup GPU related define statements 
 //@{
-#ifdef USEHIP
+#ifdef _HIP
 #define pu_gpuMalloc hipMalloc
+#define pu_gpuHostMalloc hipHostMalloc
 #define pu_gpuFree hipFree
 #define pu_gpuMemcpy hipMemcpy
 #define pu_gpuMemcpyHostToDevice hipMemcpyHostToDevice
@@ -56,12 +59,27 @@
 #define pu_gpuEventCreate hipEventCreate
 #define pu_gpuEventDestroy hipEventDestroy
 #define pu_gpuEventRecord hipEventRecord
-#define pu_gpuEventSynchronize  hipEventSynchronize
+#define pu_gpuEventSynchronize hipEventSynchronize
 #define pu_gpuEventElapsedTime hipEventElapsedTime
+#define pu_gpuDeviceSynchronize hipDeviceSynchronize
+#define pu_gpuGetErrorString hipGetErrorString
+#define pu_gpuError_t hipError_t
+#define pu_gpuErr hipErr
+#define pu_gpuSuccess hipSuccess
+#define pu_gpuGetDeviceCount hipGetDeviceCount
+#define pu_gpuDeviceProp_t hipDeviceProp_t
+#define pu_gpuSetDevice hipSetDevice
+#define pu_gpuGetDeviceProperties hipGetDeviceProperties
+#define pu_gpuDeviceGetPCIBusId hipDeviceGetPCIBusId
+#define pu_gpuDeviceReset hipDeviceReset
+#define pu_gpuLaunchKernel(...) hipLaunchKernelGGL(__VA_ARGS__)
 
-#else 
+#endif
+
+#ifdef _CUDA
 
 #define pu_gpuMalloc cudaMalloc
+#define pu_gpuHostMalloc cudaMallocHost
 #define pu_gpuFree cudaFree
 #define pu_gpuMemcpy cudaMemcpy
 #define pu_gpuMemcpyHostToDevice cudaMemcpyHostToDevice
@@ -70,14 +88,45 @@
 #define pu_gpuEventCreate cudaEventCreate
 #define pu_gpuEventDestroy cudaEventDestroy
 #define pu_gpuEventRecord cudaEventRecord
-#define pu_gpuEventSynchronize  cudaEventSynchronize
+#define pu_gpuEventSynchronize cudaEventSynchronize
 #define pu_gpuEventElapsedTime cudaEventElapsedTime
+#define pu_gpuDeviceSynchronize cudaDeviceSynchronize
+#define pu_gpuError_t cudaError_t
+#define pu_gpuErr cudaErr
+#define pu_gpuSuccess cudaSuccess
+#define pu_gpuGetDeviceCount cudaGetDeviceCount
+#define pu_gpuDeviceProp_t cudaDeviceProp_t
+#define pu_gpuSetDevice cudaSetDevice
+#define pu_gpuGetDeviceProperties cudaGetDeviceProperties
+#define pu_gpuDeviceGetPCIBusId cudaDeviceGetPCIBusId
+#define pu_gpuDeviceReset cudaDeviceReset
+#define pu_gpuLaunchKernel cudaLaunchKernel
+
+
+#endif
+
+#ifdef _GPU 
+// macro for checking errors in HIP API calls
+#define pu_gpuErrorCheck(call)                                                                 \
+do{                                                                                         \
+    pu_gpuError_t pu_gpuErr = call;                                                               \
+    if(pu_gpuSuccess != pu_gpuErr){                                                               \
+        std::cerr<<_GPU_API<<" error : "<<pu_gpuGetErrorString(pu_gpuErr)<<" - "<<__FILE__<<":"<<__LINE__<<std::endl; \
+        exit(0);                                                                            \
+    }                                                                                       \
+}while(0)
 
 #endif
 //@}
 
 namespace profiling_util {
+    #ifdef _MPI
+    extern MPI_Comm __comm;
+    extern int __comm_rank;
+    #endif
 
+    /// function that returns a string of the time at when it is called. 
+    std::string __when();
     /// function that converts the mask of thread affinity to human readable string 
     void cpuset_to_cstr(cpu_set_t *mask, char *str);
     /// reports the parallelAPI 
@@ -141,8 +190,8 @@ namespace profiling_util {
             std::size_t _val;
         };
 
-        struct _microseconds_amount {
-            std::chrono::microseconds::rep _val;
+        struct _nanoseconds_amount {
+            std::chrono::nanoseconds::rep _val;
         };
 
         template <typename T>
@@ -186,15 +235,30 @@ namespace profiling_util {
 
         template <typename T>
         inline
-        std::basic_ostream<T> &operator<<(std::basic_ostream<T> &os, const detail::_microseconds_amount &t)
+        std::basic_ostream<T> &operator<<(std::basic_ostream<T> &os, const detail::_nanoseconds_amount &t)
         {
             auto time = t._val;
-            if (time < 1000000.0) {
+	    float ftime = time;
+            if (time < 1000) {
+                os << time << " [ns]";
+                return os;
+            }    
+	    
+	    ftime = time/1000.f;
+	    time /= 1000;
+	    if (time < 1000) {
                 os << time << " [us]";
                 return os;
             }
 
-            float ftime = time / 1000000.f;
+            ftime = time / 1000.f;
+            time /= 1000;
+            if (time < 1000) {
+                os << time << " [ms]";
+                return os;
+            }
+
+            ftime = time / 1000.f;
             const char *prefix = " [s]";
             if (ftime > 60) {
                 ftime /= 60;
@@ -234,7 +298,7 @@ namespace profiling_util {
     /// @param v The value to send to the stream
     ///
     inline
-    detail::_microseconds_amount us_time(std::chrono::microseconds::rep amount) {
+    detail::_nanoseconds_amount ns_time(std::chrono::nanoseconds::rep amount) {
         return {amount};
     }
 
@@ -318,9 +382,16 @@ namespace profiling_util {
     public:
 
         using clock = std::chrono::high_resolution_clock;
-        using duration = typename std::chrono::microseconds::rep;
+        using duration = typename std::chrono::nanoseconds::rep;
         
 
+        /*!
+         * Returns whether timer has timer on device and not just host
+         *
+         * @return boolean on whether timer on device [us]
+         */
+        inline
+        bool get_use_device() const {return use_device;}
         /*!
          * Returns the number of milliseconds elapsed since the reference time
          * of the timer
@@ -329,7 +400,7 @@ namespace profiling_util {
          */
         inline
         duration get() const {
-            return std::chrono::duration_cast<std::chrono::microseconds>(clock::now() - tref).count();
+            return std::chrono::duration_cast<std::chrono::nanoseconds>(clock::now() - tref).count();
         }
 
         /*!
@@ -340,31 +411,28 @@ namespace profiling_util {
          */
         inline
         duration get_creation() const {
-            return std::chrono::duration_cast<std::chrono::microseconds>(clock::now() - t0).count();
+            return std::chrono::duration_cast<std::chrono::nanoseconds>(clock::now() - t0).count();
         }
 
         /*!
          * Returns the elapsed time on device since the reference time
          * of the device event
          *
-         * @return The time elapsed since the creation of the timer, in [us]
+         * @return The time elapsed since the creation of the timer, in [ns]
          */
-#if defined(USEHIP) || defined(USECUDA)
+#if defined(_GPU)
         inline
         float get_on_device() const 
         {
+            if (!use_device) return 0;
             pu_gpuEvent_t t1_event;
-            pu_gpuEventCreate(&t1_event);
-            pu_gpuEventRecord(t1_event); 
-            pu_gpuEventSynchronize(t1_event);
+            pu_gpuErrorCheck(pu_gpuEventCreate(&t1_event));
+            pu_gpuErrorCheck(pu_gpuEventRecord(t1_event)); 
+            pu_gpuErrorCheck(pu_gpuEventSynchronize(t1_event));
             float telapsed;
-            pu_gpuEventElapsedTime(&telapsed,t0_event,t1_event);
-#ifdef USEHIP
-            telapsed *= 1000; // to convert to milliseconds 
-#else
-            telapsed *= 1000; // to convert to milliseconds 
-#endif
-            pu_gpuEventDestroy(t1_event);
+            pu_gpuErrorCheck(pu_gpuEventElapsedTime(&telapsed,t0_event,t1_event));
+            telapsed *= _GPU_TO_SECONDS * 1e9; // to convert to seconds 
+            pu_gpuErrorCheck(pu_gpuEventDestroy(t1_event));
             return telapsed;
         }
 #endif
@@ -373,9 +441,11 @@ namespace profiling_util {
         {
             ref = new_ref;
             t0 = clock::now();
-#if defined(USEHIP) || defined(USECUDA)
-            pu_gpuEventRecord(t0_event); 
-            pu_gpuEventSynchronize(t0_event);
+#if defined(_GPU)
+            if (use_device) {
+                pu_gpuErrorCheck(pu_gpuEventRecord(t0_event)); 
+                pu_gpuErrorCheck(pu_gpuEventSynchronize(t0_event));
+            }
 #endif
         };
         std::string get_ref() const 
@@ -383,20 +453,23 @@ namespace profiling_util {
             return ref;
         };
 
-        Timer(const std::string &f, const std::string &l) {
+        Timer(const std::string &f, const std::string &l, bool _use_device=true) {
             ref="@"+f+" L"+l;
             t0 = clock::now();
             tref = t0;
-#if defined(USEHIP) || defined(USECUDA)
-            pu_gpuEventCreate(&t0_event);
-            pu_gpuEventRecord(t0_event); 
-            pu_gpuEventSynchronize(t0_event);
+            use_device = _use_device;
+#if defined(_GPU)
+            if (use_device) {
+                pu_gpuErrorCheck(pu_gpuEventCreate(&t0_event));
+                pu_gpuErrorCheck(pu_gpuEventRecord(t0_event)); 
+                pu_gpuErrorCheck(pu_gpuEventSynchronize(t0_event));
+            }
 #endif
         }
-#if defined(USEHIP) || defined(USECUDA)
+#if defined(_GPU)
         ~Timer()
         {
-            pu_gpuEventDestroy(t0_event);
+            if (use_device) pu_gpuErrorCheck(pu_gpuEventDestroy(t0_event));
         }
 #endif
 
@@ -404,7 +477,8 @@ namespace profiling_util {
         clock::time_point t0;
         clock::time_point tref;
         std::string ref;
-#if defined(USEHIP) || defined(USECUDA)
+        bool use_device = true;
+#if defined(_GPU)
         pu_gpuEvent_t t0_event;
 #endif
     };
@@ -414,62 +488,76 @@ namespace profiling_util {
     std::string ReportTimeTaken(const Timer &t, const std::string &f, const std::string &l);
     float GetTimeTaken(const Timer &t, const std::string &f, const std::string &l);
 
-#if defined(USEHIP) || defined(USECUDA)
+#if defined(_GPU)
     std::string ReportTimeTakenOnDevice(const Timer &t, const std::string &f, const std::string &l);
     float GetTimeTakenOnDevice(const Timer &t, const std::string &f, const std::string &l);
 #endif
 }
 
-/// \def utility definitions 
+/// \def logger utility definitions 
 //@{
-#define _where_calling_from "@"<<__func__<<" L"<<std::to_string(__LINE__)
-/// MPI helper routines
-//{@
+#define _where_calling_from "@"<<__func__<<" L"<<std::to_string(__LINE__)<<" "
+#define _when_calling_from "("<<profiling_util::__when()<<") : "
 #ifdef _MPI 
-//#define MPIOnly0 if (ThisTask == 0)
-#define _MPI_calling_rank(task) "["<<std::setw(5) << std::setfill('0')<<task<<"] "<<std::setw(0)
-
+#define _MPI_calling_rank "["<<std::setw(5) << std::setfill('0')<<profiling_util::__comm_rank<<"] "<<std::setw(0)
+#define _log_header _MPI_calling_rank<<_where_calling_from<<_when_calling_from
+#else 
+#define _log_header _where_calling_from<<_when_calling_from
 #endif
-    //@}
+
 //@}
+
+/// \def gerenal logging  
+//@{
+#ifdef _MPI
+#define MPISetLoggingComm(comm) {profiling_util::__comm = comm; MPI_Comm_rank(profiling_util::__comm, &profiling_util::__comm_rank);}
+#endif
+#define Logger(logger) logger<<_log_header
+#define Log() std::cout<<_log_header
+#define LogErr() std::cerr<<_log_header
+#ifdef _OPENMP
+#define LOGGING() shared(profiling_util::__comm, profiling_util::__comm_rank, std::cout)
+#endif
+//@}
+
 /// \defgroup LogAffinity
 /// Log thread affinity and parallelism either to std or an ostream
 //@{
-#define LogParallelAPI() std::cout<<_where_calling_from<<"\n"<<profiling_util::ReportParallelAPI()<<std::endl;
-#define LogBinding() std::cout<<_where_calling_from<<"\n"<<profiling_util::ReportBinding()<<std::endl;
-#define LogThreadAffinity() printf("%s \n", profiling_util::ReportThreadAffinity(__func__, std::to_string(__LINE__)).c_str());
-#define LoggerThreadAffinity(logger) logger<<profiling_util::ReportThreadAffinity(__func__, std::to_string(__LINE__))<<std::endl;
+#define LogParallelAPI() Log()<<"\n"<<profiling_util::ReportParallelAPI()<<std::endl;
+#define LogBinding() Log()<<"\n"<<profiling_util::ReportBinding()<<std::endl;
+#define LogThreadAffinity() {auto __s = profiling_util::ReportThreadAffinity(__func__, std::to_string(__LINE__)); Log()<<__s;}
+#define LoggerThreadAffinity(logger) {auto __s = <<profiling_util::ReportThreadAffinity(__func__, std::to_string(__LINE__)); Logger(logger)<<__s;}
 #ifdef _MPI
-#define MPILog0ThreadAffinity() if(ThisTask == 0) printf("%s \n", profiling_util::ReportThreadAffinity(__func__, std::to_string(__LINE__)).c_str());
-#define MPILogger0ThreadAffinity(logger) if(ThisTask == 0)logger<<profiling_util::ReportThreadAffinity(__func__, std::to_string(__LINE__))<<std::endl;
-#define MPILogThreadAffinity(comm) printf("%s \n", profiling_util::MPIReportThreadAffinity(__func__, std::to_string(__LINE__), comm).c_str());
-#define MPILoggerThreadAffinity(logger, comm) logger<<profiling_util::MPIReportThreadAffinity(__func__, std::to_string(__LINE__), comm)<<std::endl;
-#define MPILog0ParallelAPI() if(ThisTask==0) std::cout<<_where_calling_from<<"\n"<<profiling_util::ReportParallelAPI()<<std::endl;
-#define MPILog0Binding() {auto s =profiling_util::ReportBinding(); if (ThisTask == 0) std::cout<<_where_calling_from<<"\n"<<s<<std::endl;}
+#define MPILog0ThreadAffinity() if(profiling_util::__comm_rank == 0) LogThreadAffinity();
+#define MPILogger0ThreadAffinity(logger) if(profiling_util::__comm_rank == 0) LogThreadAffinity(logger);
+#define MPILogThreadAffinity() {auto __s = profiling_util::MPIReportThreadAffinity(__func__, std::to_string(__LINE__),  profiling_util::__comm); Log()<<__s;}
+#define MPILoggerThreadAffinity(logger) {auto __s = profiling_util::MPIReportThreadAffinity(__func__, std::to_string(__LINE__), profiling_util::__comm); Logger(logger)<<__s;}
+#define MPILog0ParallelAPI() if(profiling_util::__comm_rank == 0) Log()<<"\n"<<profiling_util::ReportParallelAPI()<<std::endl;
+#define MPILog0Binding() {auto s = profiling_util::ReportBinding(); if (profiling_util::__comm_rank == 0)Log()<<"\n"<<s<<std::endl;}
 #endif
 //@}
 
 /// \defgroup LogMem
 /// Log memory usage either to std or an ostream
 //@{
-#define LogMemUsage() std::cout<<profiling_util::ReportMemUsage(__func__, std::to_string(__LINE__))<<std::endl;
-#define LoggerMemUsage(logger) logger<<profiling_util::ReportMemUsage(__func__, std::to_string(__LINE__))<<std::endl;
+#define LogMemUsage() Log()<<profiling_util::ReportMemUsage(__func__, std::to_string(__LINE__))<<std::endl;
+#define LoggerMemUsage(logger) Logger(logger)<<profiling_util::ReportMemUsage(__func__, std::to_string(__LINE__))<<std::endl;
 
 #ifdef _MPI
-#define MPILogMemUsage() std::cout<<_MPI_calling_rank(ThisTask)<<profiling_util::ReportMemUsage(__func__, std::to_string(__LINE__))<<std::endl;
-#define MPILoggerMemUsage(logger) logger<<_MPI_calling_rank(ThisTask)<<profiling_util::ReportMemUsage(__func__, std::to_string(__LINE__))<<std::endl;
-#define MPILog0NodeMemUsage(comm) {auto report=profiling_util::MPIReportNodeMemUsage(comm, __func__, std::to_string(__LINE__));if (ThisTask == 0) {std::cout<<_MPI_calling_rank(ThisTask)<<report<<std::endl;}}
-#define MPILogger0NodeMemUsage(logger, comm) {auto report=profiling_util::MPIReportNodeMemUsage(comm, __func__, std::to_string(__LINE__));if (ThisTask == 0) logger<<_MPI_calling_rank(ThisTask)<<report<<std::endl;}
+#define MPILogMemUsage() Log()<<profiling_util::ReportMemUsage(__func__, std::to_string(__LINE__))<<std::endl;
+#define MPILoggerMemUsage(logger) Logger(logger)<<profiling_util::ReportMemUsage(__func__, std::to_string(__LINE__))<<std::endl;
+#define MPILog0NodeMemUsage() {auto __s=profiling_util::MPIReportNodeMemUsage(profiling_util::__comm, __func__, std::to_string(__LINE__)); if (profiling_util::__comm_rank == 0) {Log()<<__s<<std::endl;}}
+#define MPILogger0NodeMemUsage(logger) {auto __s=profiling_util::MPIReportNodeMemUsage(profiling_util::__comm, __func__, std::to_string(__LINE__)); int __comm_rank; if (profiling_util::__comm_rank == 0) {Logger(logger)<<__s<<std::endl;}}
 #endif
 
 #define LogSystemMem() std::cout<<profiling_util::ReportSystemMem(__func__, std::to_string(__LINE__))<<std::endl;
 #define LoggerSystemMem(logger) logger<<profiling_util::ReportSystemMem(__func__, std::to_string(__LINE__))<<std::endl;
 
 #ifdef _MPI
-#define MPILogSystemMem() std::cout<<_MPI_calling_rank(ThisTask)<<profiling_util::ReportSystemMem(__func__, std::to_string(__LINE__))<<std::endl;
-#define MPILoggerSystemMem(logger) logger<<_MPI_calling_rank(ThisTask)<<profiling_util::ReportSystemMem(__func__, std::to_string(__LINE__))<<std::endl;
-#define MPILog0NodeSystemMem(comm) {auto report=profiling_util::MPIReportNodeSystemMem(comm, __func__, std::to_string(__LINE__));if (ThisTask == 0){std::cout<<_MPI_calling_rank(ThisTask)<<report<<std::endl;}}
-#define MPILogger0NodeSystemMem(logger, comm) {auto report = profiling_util::MPIReportNodeSystemMem(__func__, std::to_string(__LINE__));if (ThisTask == 0) {logger<<_MPI_calling_rank(ThisTask)<<report<<std::endl;}}
+#define MPILogSystemMem() Log()<<profiling_util::ReportSystemMem(__func__, std::to_string(__LINE__))<<std::endl;
+#define MPILoggerSystemMem(logger) Logger(logger)<<profiling_util::ReportSystemMem(__func__, std::to_string(__LINE__))<<std::endl;
+#define MPILog0NodeSystemMem() {auto __s=profiling_util::MPIReportNodeSystemMem(profiling_util::__comm, __func__, std::to_string(__LINE__));if (profiling_util::__comm_rank == 0){Log()<<__s<<std::endl;}}
+#define MPILogger0NodeSystemMem(logger) {auto __s = profiling_util::MPIReportNodeSystemMem(profiling_util::__comm, __func__, std::to_string(__LINE__));if (profiling_util::__comm_rank == 0) {Logger(logger)<<__s<<std::endl;}}
 #endif
 //@}
 
@@ -477,15 +565,18 @@ namespace profiling_util {
 /// \defgroup LogTime
 /// Log time taken either to std or an ostream
 //@{
-#define LogTimeTaken(timer) std::cout<<profiling_util::ReportTimeTaken(timer, __func__, std::to_string(__LINE__))<<std::endl;
-#define LoggerTimeTaken(logger,timer) logger<<profiling_util::ReportTimeTaken(timer,__func__, std::to_string(__LINE__))<<std::endl;
-#define LogTimeTakenOnDevice(timer) std::cout<<profiling_util::ReportTimeTakenOnDevice(timer, __func__, std::to_string(__LINE__))<<std::endl;
-#define LoggerTimeTakenOnDevice(logger,timer) logger<<profiling_util::ReportTimeTakenOnDevice(timer,__func__, std::to_string(__LINE__))<<std::endl;
+#define LogTimeTaken(timer) Log()<<profiling_util::ReportTimeTaken(timer, __func__, std::to_string(__LINE__))<<std::endl;
+#define LoggerTimeTaken(logger,timer) Logger(logger)<<profiling_util::ReportTimeTaken(timer,__func__, std::to_string(__LINE__))<<std::endl;
+#define LogTimeTakenOnDevice(timer) Log()<<profiling_util::ReportTimeTakenOnDevice(timer, __func__, std::to_string(__LINE__))<<std::endl;
+#define LoggerTimeTakenOnDevice(logger,timer) Logger(logger)<<profiling_util::ReportTimeTakenOnDevice(timer,__func__, std::to_string(__LINE__))<<std::endl;
 #ifdef _MPI
-#define MPILogTimeTaken(timer) std::cout<<_MPI_calling_rank(ThisTask)<<profiling_util::ReportTimeTaken(timer, __func__, std::to_string(__LINE__))<<std::endl;
-#define MPILoggerTimeTaken(logger,timer) logger<<_MPI_calling_rank(ThisTask)<<profiling_util::ReportTimeTaken(timer,__func__, std::to_string(__LINE__))<<std::endl;
+#define MPILogTimeTaken(timer) Log()<<profiling_util::ReportTimeTaken(timer, __func__, std::to_string(__LINE__))<<std::endl;
+#define MPILoggerTimeTaken(logger,timer) Logger(logger)<<profiling_util::ReportTimeTaken(timer,__func__, std::to_string(__LINE__))<<std::endl;
+#define MPILogTimeTakenOnDevice(timer) Log()<<profiling_util::ReportTimeTakenOnDevice(timer, __func__, std::to_string(__LINE__))<<std::endl;
+#define MPILoggerTimeTakenOnDevice(logger,timer) Logger(logger)<<profiling_util::ReportTimeTakenOnDevice(timer,__func__, std::to_string(__LINE__))<<std::endl;
 #endif 
 #define NewTimer() profiling_util::Timer(__func__, std::to_string(__LINE__));
+#define NewTimerHostOnly() profiling_util::Timer(__func__, std::to_string(__LINE__), false);
 //@}
 
 /// \defgroup C_naming

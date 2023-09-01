@@ -32,3 +32,15 @@ Main API are defined as macros. There are calls to report
 The Main API is through extern C functions. 
 
 For C, the name convention follows the C++ expect there is a `_` between words and all are lower case. For examle `LogParallelAPI` -> `log_parallel_api()`.
+
+## Compilation 
+
+# Scripts 
+
+The code can build libraries through scripts 
+- `build_cpu.sh`: builds serial, openmp, mpi, and mpi+openmp versions of the library and stores them in `/lib/`, each with a suffix appended to the library name of `<none>`, `omp`, `mpi`, `mpi_omp`.
+- `build_cuda.sh`: builds cuda, cuda+openmp, cuda+mpi, and cuda+mpi+openmp versions of the library and stores them in `/lib/`. Follows similar naming convention to cpu only builds.
+- `build_hip.sh`: similar to cuda but for hip
+
+# CMake
+Can also build the library with `cmake` and the options `-DPU_ENABLE_MPI`, `-DPU_ENABLE_OPENMP`, `-DPU_ENABLE_CUDA`, and `-DPU_ENABLE_HIP`. Builds single library with desired functionality. 

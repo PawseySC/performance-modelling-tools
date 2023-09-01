@@ -2,19 +2,19 @@ buildtype ?= omp
 DEFS = -DUSEOPENMP
 OPTFLAGS = -O2
 CXXFLAGS = -fPIC -std=c++17 $(OPTFLAGS) -fopenmp
-CXX = gcc
+CXX = CC
 
 
 ifeq ($(buildtype), cuda)
 CXX = nvcc
 CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS)
-DEFS = -DUSECUDA
+DEFS = -D_CUDA -DUSECUDA
 endif
 
 ifeq ($(buildtype), hip)
 CXX = hipcc
-CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS)
-DEFS = -DUSEHIP 
+CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS) --amdgpu-target=gfx90a
+DEFS = -D_HIP -DUSEHIP
 endif
 
 ifeq ($(buildtype), cudaomp)
@@ -31,18 +31,18 @@ endif
 ifeq ($(buildtype), cudahip)
 CXX = hipcc
 CXXFLAGS = -Xcompiler -fPIC -Xcompiler -std=c++14 $(OPTFLAGS) 
-DEFS = -DUSEHIP
+DEFS = -D_HIP -DUSEHIP
 endif
 
 ifeq ($(buildtype), hipomp)
 CXX = amdclang++
-CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenmp --offload-arch=gfx908 -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx908
+CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenmp --offload-arch=gfx90a -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a
 #DEFS =
 endif
 
 ifeq ($(buildtype), hipacc)
 CXX = amdclang++
-CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenacc --offload-arch=gfx908 -fopenacc-targets=amdgcn-amd-amdhsa -march=gfx908
+CXXFLAGS = -std=c++14 -fPIC $(OPTFLAGS) -fopenacc --offload-arch=gfx90a -fopenacc-targets=amdgcn-amd-amdhsa -march=gfx90a
 #DEFS =
 endif
 
