@@ -1,13 +1,17 @@
-# Oceananigans
+# Oceananigans on GCP
+This example is included to show how to create an auto-scaling cluster on Google Cloud Platform that provides access to V100 and A100 GPUs. This is particularly useful for the porting work, where Oceananigans.jl originally only functioned for Nvidia GPUs.
 
 
-https://github.com/CliMA/Oceananigans.jl.git at branch `ss/for-scaling` (commit sha : `11226bcc`)
+## Creating a cluster
 
-
+## Running the examples
 
 ## Notes
 
 ### Installation warnings
+Noted on 1/23/2023 with CUDA 12.2.128, Julia 1.10.0 on CentOS-7 deployment of Slurm-GCP v5. Although the warnings below were displayed to stdout, there seems to be no impact on the runtime correctness of Oceananigans.
+
+
 At the end of dependency instantiation, the following warnings were shown on the Slurm-GCP V100 compute node
 ```
 ┌ CUDA → SpecialFunctionsExt
