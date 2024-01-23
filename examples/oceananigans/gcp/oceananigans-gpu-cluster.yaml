@@ -1,0 +1,133 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+
+blueprint_name: hpc-slurm
+
+vars:
+  project_id:  fluidnumerics-research
+  deployment_name: rcc
+  region: europe-west4
+  zone: europe-west4-b
+
+# Documentation for each of the modules used below can be found at
+# https://github.com/GoogleCloudPlatform/hpc-toolkit/blob/main/modules/README.md
+
+deployment_groups:
+- group: primary
+  modules:
+  # Source is an embedded resource, denoted by "resources/*" without ./, ../, /
+  # as a prefix. To refer to a local resource, prefix with ./, ../ or /
+  # Example - ./resources/network/vpc
+  - id: network1
+    source: modules/network/vpc
+
+  # - id: homefs
+  #   source: modules/file-system/filestore
+  #   use: [network1]
+  #   settings:
+  #     local_mount: /home
+
+  - id: debug_node_group
+    source: community/modules/compute/schedmd-slurm-gcp-v5-node-group
+    settings:
+      node_count_dynamic_max: 4
+      machine_type: n2-standard-2
+
+  - id: debug_partition
+    source: community/modules/compute/schedmd-slurm-gcp-v5-partition
+    use:
+    - network1
+    - debug_node_group
+    settings:
+      partition_name: debug
+      exclusive: false # allows nodes to stay up after jobs are done
+      enable_placement: false # the default is: true
+      is_default: true
+
+  - id: a21g_node_group
+    source: community/modules/compute/schedmd-slurm-gcp-v5-node-group
+    settings:
+      node_count_dynamic_max: 20
+      machine_type: a2-highgpu-1g
+      # node_conf: 
+      #   Weight: 1
+
+  # - id: a24g_node_group
+  #   source: community/modules/compute/schedmd-slurm-gcp-v5-node-group
+  #   settings:
+  #     node_count_dynamic_max: 20
+  #     machine_type: a2-highgpu-4g
+  #     node_conf: 
+  #       Weight: 10
+
+  - id: a2_partition
+    source: community/modules/compute/schedmd-slurm-gcp-v5-partition
+    use:
+    - a21g_node_group
+    - network1
+    settings:
+      partition_name: a2
+
+  - id: v1001g_node_group
+    source: community/modules/compute/schedmd-slurm-gcp-v5-node-group
+    settings:
+      node_count_dynamic_max: 20
+      machine_type: n1-standard-8
+      guest_accelerator:
+        - type: nvidia-tesla-v100
+          count: 1
+      # node_conf: 
+      #   Weight: 1
+
+  # - id: v1004g_node_group
+  #   source: community/modules/compute/schedmd-slurm-gcp-v5-node-group
+  #   settings:
+  #     node_count_dynamic_max: 20
+  #     machine_type: n1-standard-32
+  #     guest_accelerator:
+  #       - type: nvidia-tesla-v100
+  #         count: 4
+  #     node_conf: 
+  #       Weight: 10
+
+  - id: v100_partition
+    source: community/modules/compute/schedmd-slurm-gcp-v5-partition
+    use:
+    - v1001g_node_group
+    - network1
+    settings:
+      partition_name: v100
+
+
+
+  - id: slurm_controller
+    source: community/modules/scheduler/schedmd-slurm-gcp-v5-controller
+    use:
+    - network1
+    - debug_partition
+    - a2_partition
+    - v100_partition
+    settings:
+      disable_controller_public_ips: false
+
+  - id: slurm_login
+    source: community/modules/scheduler/schedmd-slurm-gcp-v5-login
+    use:
+    - network1
+    - slurm_controller
+    settings:
+      machine_type: n2-standard-4
+      disable_login_public_ips: false
